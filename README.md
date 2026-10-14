@@ -1,2 +1,4 @@
 # INFS3605-Project-Repo
-Cafe centralised AI inventory management platform project files
+Our repo for our centralised AI inventory management system for cafes
+
+Jodet - Dev | Backend and database design
