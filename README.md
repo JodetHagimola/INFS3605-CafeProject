@@ -8,3 +8,5 @@ Jodet - Dev | Backend and database design
 Siqi - Dev | Business analysis
 
 Itisha - Scrum Master 
+
+Dinkal - Dev | UX Design
