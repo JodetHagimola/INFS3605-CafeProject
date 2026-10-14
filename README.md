@@ -6,3 +6,5 @@ Simone - Project Owner
 Jodet - Dev | Backend and database design
 
 Siqi - Dev | Business analysis
+
+Itisha - Scrum Master 
