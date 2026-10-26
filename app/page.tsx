@@ -21,7 +21,9 @@ export default async function OrdersPage() {
           <div>
             <p className="eyebrow">DAILY OPERATIONS</p>
             <h1 id="orders-title">Orders</h1>
-            <p className="section-description">Your most recent orders, first.</p>
+            <p className="section-description">
+              Complete orders with an ID and creation time, newest first.
+            </p>
           </div>
           {!result.error && (
             <p className="order-count">
@@ -40,8 +42,8 @@ export default async function OrdersPage() {
           </div>
         ) : result.orders.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-title">No orders yet</p>
-            <p>When an order is added to Supabase, it will appear here.</p>
+            <p className="empty-title">No complete orders yet</p>
+            <p>Orders with an ID and creation time will appear here.</p>
           </div>
         ) : (
           <div className="table-wrap">

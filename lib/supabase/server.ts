@@ -35,6 +35,8 @@ export async function getOrders(): Promise<
   const { data, error } = await supabase
     .from("order")
     .select("*")
+    .not("id", "is", null)
+    .not("created_at", "is", null)
     .order("created_at", { ascending: false });
 
   if (error) {
