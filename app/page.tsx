@@ -13,7 +13,10 @@ export default async function OrdersPage() {
           <span className="wordmark-mark" aria-hidden="true">C</span>
           <span>Cafe Inventory</span>
         </a>
-        <span className="topbar-note">Order book</span>
+        <nav className="topbar-nav" aria-label="Main navigation">
+          <a href="/" aria-current="page">Orders</a>
+          <a href="/inventory">Inventory</a>
+        </nav>
       </header>
 
       <section className="orders-section" aria-labelledby="orders-title">
