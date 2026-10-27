@@ -9,15 +9,14 @@ export default async function AutomatedOrderingPage() {
   return (
     <main className="page-shell">
       <header className="topbar">
-        <a className="wordmark" href="/" aria-label="Cafe Inventory home">
-          <span className="wordmark-mark" aria-hidden="true">C</span>
-          <span>Cafe Inventory</span>
+        <a className="wordmark" href="/" aria-label="Brewlytics home">
+          <span className="wordmark-mark" aria-hidden="true">B</span>
+          <span>Brewlytics</span>
         </a>
         <nav className="topbar-nav" aria-label="Main navigation">
-          <a href="/">Orders</a>
+          <a href="/orders">Orders</a>
           <a href="/inventory">Inventory</a>
-          <a href="/automated-ordering" aria-current="page">AI Forecast</a>
-          <a href="/order-requests">Order requests</a>
+          <a href="/order-requests">Supply requests</a>
         </nav>
       </header>
       <section className="orders-section" aria-labelledby="automated-ordering-title">
