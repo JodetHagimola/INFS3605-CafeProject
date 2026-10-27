@@ -16,6 +16,7 @@ export default async function InventoryPage() {
           <a href="/">Orders</a>
           <a href="/inventory" aria-current="page">Inventory</a>
           <a href="/automated-ordering">AI Forecast</a>
+          <a href="/order-requests">Order requests</a>
         </nav>
       </header>
       <section style={{ margin: "40px 0 64px" }} aria-labelledby="inventory-title">

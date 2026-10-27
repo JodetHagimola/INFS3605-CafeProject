@@ -36,50 +36,45 @@ export default function AutomatedOrderingPage() {
   }
 
   return (
-    <main style={{ padding: "40px", maxWidth: "900px", margin: "auto" }}>
-      <h1 style={{ fontSize: "28px", fontWeight: "bold" }}>
-        AI Automated Ordering
-      </h1>
+    <main className="page-shell">
+      <header className="topbar">
+        <a className="wordmark" href="/" aria-label="Cafe Inventory home">
+          <span className="wordmark-mark" aria-hidden="true">C</span>
+          <span>Cafe Inventory</span>
+        </a>
+        <nav className="topbar-nav" aria-label="Main navigation">
+          <a href="/">Orders</a>
+          <a href="/inventory">Inventory</a>
+          <a href="/automated-ordering" aria-current="page">AI Forecast</a>
+          <a href="/order-requests">Order requests</a>
+        </nav>
+      </header>
+      <section className="orders-section" aria-labelledby="automated-ordering-title">
+        <h1 id="automated-ordering-title">AI Automated Ordering</h1>
 
-      <p style={{ marginTop: "12px", marginBottom: "24px" }}>
-        Generate ingredient order recommendations using AI sales
-        forecasts and current inventory levels.
-      </p>
-
-      <button
-        onClick={generateRecommendations}
-        disabled={loading}
-        style={{
-          backgroundColor: "#2563eb",
-          color: "white",
-          padding: "12px 20px",
-          borderRadius: "8px",
-          cursor: "pointer",
-        }}
-      >
-        {loading ? "Generating..." : "Generate Recommendations"}
-      </button>
-
-      {error && (
-        <p style={{ color: "red", marginTop: "20px" }}>
-          Error: {error}
+        <p className="section-description" style={{ marginBottom: "24px" }}>
+          Generate ingredient order recommendations using AI sales
+          forecasts and current inventory levels.
         </p>
-      )}
 
-      {recommendations && (
-        <pre
-          style={{
-            marginTop: "30px",
-            padding: "20px",
-            backgroundColor: "#f3f4f6",
-            borderRadius: "8px",
-            whiteSpace: "pre-wrap",
-            color: "#111827",
-          }}
+        <button
+          className="primary-button"
+          onClick={generateRecommendations}
+          disabled={loading}
         >
-          {recommendations}
-        </pre>
-      )}
+          {loading ? "Generating..." : "Generate Recommendations"}
+        </button>
+
+        {error && (
+          <p className="form-message error" role="alert">
+            Error: {error}
+          </p>
+        )}
+
+        {recommendations && (
+          <pre className="recommendations">{recommendations}</pre>
+        )}
+      </section>
     </main>
   );
 }

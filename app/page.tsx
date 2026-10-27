@@ -17,6 +17,7 @@ export default async function OrdersPage() {
           <a href="/" aria-current="page">Orders</a>
           <a href="/inventory">Inventory</a>
           <a href="/automated-ordering">AI Forecast</a>
+          <a href="/order-requests">Order requests</a>
         </nav>
       </header>
 
