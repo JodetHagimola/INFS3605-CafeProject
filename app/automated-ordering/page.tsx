@@ -1,40 +1,11 @@
 
-"use client";
+import { connection } from "next/server";
+import { getLatestDraft } from "@/lib/agent/server";
+import { AgentPanel } from "./agent-panel";
 
-import { useState } from "react";
-
-export default function AutomatedOrderingPage() {
-  const [recommendations, setRecommendations] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function generateRecommendations() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/recommendations");
-
-      if (!response.ok) {
-        throw new Error("Could not connect to the Python API");
-      }
-
-      const data = await response.json();
-
-      if (data.status !== "success") {
-        throw new Error(data.message || "Prediction failed");
-      }
-
-      setRecommendations(data.recommendations);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Something went wrong"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export default async function AutomatedOrderingPage() {
+  await connection();
+  const { draft, error } = await getLatestDraft();
   return (
     <main className="page-shell">
       <header className="topbar">
@@ -51,29 +22,13 @@ export default function AutomatedOrderingPage() {
       </header>
       <section className="orders-section" aria-labelledby="automated-ordering-title">
         <h1 id="automated-ordering-title">AI Automated Ordering</h1>
-
-        <p className="section-description" style={{ marginBottom: "24px" }}>
-          Generate ingredient order recommendations using AI sales
-          forecasts and current inventory levels.
+        <p className="section-description">
+          Review a forecast-based replenishment draft. The AI can only read the
+          approved café data and save a draft; it cannot contact suppliers or
+          change stock.
         </p>
-
-        <button
-          className="primary-button"
-          onClick={generateRecommendations}
-          disabled={loading}
-        >
-          {loading ? "Generating..." : "Generate Recommendations"}
-        </button>
-
-        {error && (
-          <p className="form-message error" role="alert">
-            Error: {error}
-          </p>
-        )}
-
-        {recommendations && (
-          <pre className="recommendations">{recommendations}</pre>
-        )}
+        {error && <p className="form-message error" role="alert">{error}</p>}
+        <AgentPanel initialDraft={draft} />
       </section>
     </main>
   );

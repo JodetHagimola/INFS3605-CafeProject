@@ -1,8 +1,22 @@
 
-from fastapi import FastAPI
+from datetime import date
+import subprocess
+import sys
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict
 
 app = FastAPI()
+
+
+class ForecastRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    forecast_date: date
+    is_public_holiday: bool
+
 
 # Allow the local Next.js website to communicate with Python
 app.add_middleware(
@@ -17,10 +31,6 @@ app.add_middleware(
 def home():
     return {"message": "Cafe AI API is running!"}
 
-
-import subprocess
-import sys
-from pathlib import Path
 
 @app.get("/recommendations")
 def get_recommendations():
@@ -47,3 +57,20 @@ def get_recommendations():
         "status": "success",
         "recommendations": result.stdout
     }
+
+
+@app.post("/forecast")
+def get_forecast(request: ForecastRequest):
+    try:
+        from ML.data.agent_forecast import forecast_drink_sales
+
+        return {
+            "status": "success",
+            **forecast_drink_sales(request.forecast_date, request.is_public_holiday),
+        }
+    except Exception as error:
+        print(f"Forecast model failed: {error}", file=sys.stderr)
+        raise HTTPException(
+            status_code=500,
+            detail="The saved forecast model could not produce a forecast.",
+        ) from error
