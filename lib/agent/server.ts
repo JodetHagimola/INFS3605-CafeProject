@@ -2,7 +2,7 @@ import "server-only";
 
 import { createGoogle } from "@ai-sdk/google";
 import { createClient } from "@supabase/supabase-js";
-import { generateText, isStepCount, tool } from "ai";
+import { APICallError, generateText, isStepCount, RetryError, tool, wrapLanguageModel } from "ai";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { forecastDrinkSales } from "@/lib/agent/forecast";
@@ -333,10 +333,23 @@ function assertKnownSupplierChoice(choice: SupplierChoice, prices: SupplierPrice
 
 function makeToolCounter() {
   let count = 0;
-  return () => {
-    count += 1;
-    if (count > 5) throw new Error("The agent reached its five-tool-call limit.");
+  return {
+    countToolCall() {
+      count += 1;
+      if (count > 5) throw new Error("The agent reached its five-tool-call limit.");
+    },
+    reset() {
+      count = 0;
+    },
   };
+}
+
+function isTransientModelError(error: unknown): boolean {
+  if (RetryError.isInstance(error)) {
+    return isTransientModelError(error.lastError);
+  }
+  return APICallError.isInstance(error)
+    && [408, 429, 500, 502, 503, 504].includes(error.statusCode ?? 0);
 }
 
 export async function runAgent(input: {
@@ -358,7 +371,8 @@ export async function runAgent(input: {
     throw new Error("Choose a valid forecast date.");
   }
 
-  const countToolCall = makeToolCounter();
+  const toolCounter = makeToolCounter();
+  const { countToolCall } = toolCounter;
   const context: {
     forecast?: Forecast;
     ingredients?: Ingredient[];
@@ -370,8 +384,34 @@ export async function runAgent(input: {
   } = {};
 
   const google = createGoogle({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY });
+  const primaryModelId = process.env.GOOGLE_GENERATIVE_AI_MODEL || "gemini-3.8-flash";
+  const fallbackModelId = process.env.GOOGLE_GENERATIVE_AI_FALLBACK_MODEL || "gemini-3.7-flash";
+  const model = wrapLanguageModel({
+    model: google(primaryModelId),
+    middleware: {
+      wrapGenerate: async ({ doGenerate, params }) => {
+        try {
+          return await doGenerate();
+        } catch (error) {
+          if (!isTransientModelError(error)
+            || primaryModelId === fallbackModelId
+            || context.draft) {
+            throw error;
+          }
+
+          console.warn(
+            `Google model ${primaryModelId} is temporarily unavailable; retrying with ${fallbackModelId}.`,
+          );
+          toolCounter.reset();
+          return google(fallbackModelId).doGenerate(params);
+        }
+      },
+    },
+  });
   const result = await generateText({
-    model: google("gemini-3.8-flash"),
+    model,
+    maxRetries: 0,
+    abortSignal: AbortSignal.timeout(45000),
     instructions: AGENT_SYSTEM_PROMPT,
     prompt: [
       `Margaret's request: ${input.request}`,
