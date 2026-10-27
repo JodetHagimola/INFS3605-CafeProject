@@ -16,6 +16,7 @@ export default function HomePage() {
         <nav className="topbar-nav" aria-label="Main navigation">
           <a href="/orders">Orders</a>
           <a href="/inventory">Inventory</a>
+          <a href="/automated-ordering">AI Forecast</a>
           <a href="/order-requests">Supply requests</a>
         </nav>
         <a className="nav-cta" href="/inventory">Explore workspace</a>

@@ -18,6 +18,7 @@ export default async function OrdersPage() {
         <nav className="topbar-nav" aria-label="Main navigation">
           <a href="/orders" aria-current="page">Orders</a>
           <a href="/inventory">Inventory</a>
+          <a href="/automated-ordering">AI Forecast</a>
           <a href="/order-requests">Supply requests</a>
         </nav>
       </header>
