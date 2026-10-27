@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { generateText, isStepCount, tool } from "ai";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { forecastDrinkSales } from "@/lib/agent/forecast";
 
 const AGENT_SYSTEM_PROMPT = `CONTEXT
 Margaret owns a small café in Surry Hills and manages finances, ordering and team training herself. Each week she manually checks stock levels, estimates how much to order based on past demand and the holiday season, then phones several suppliers to compare prices and delivery times before calling her chosen supplier with the order. Stock counts, supplier prices and demand patterns live in her head, on paper or across phone calls.
@@ -207,33 +208,6 @@ async function readAll(table: string, columns: string): Promise<RawRow[]> {
   }
 }
 
-function toForecast(value: unknown, requestedDate: string, isPublicHoliday: boolean): Forecast {
-  const result = record(value, "Forecast service");
-  if (result.status !== "success"
-    || result.forecastDate !== requestedDate
-    || result.isPublicHoliday !== isPublicHoliday
-    || !result.predictedSales
-    || typeof result.predictedSales !== "object"
-    || Array.isArray(result.predictedSales)) {
-    throw new Error("The forecast service returned incomplete or conflicting data.");
-  }
-  const rawSales = result.predictedSales as Record<string, unknown>;
-  const predictedSales: Record<string, number> = {};
-  for (const product of ["Latte", "Cappuccino", "Flat White", "Long Black", "Mocha"]) {
-    const sales = numberValue(rawSales[product], `Forecast for ${product}`);
-    if (!Number.isSafeInteger(sales)) {
-      throw new Error(`Forecast for ${product} is not a whole number.`);
-    }
-    predictedSales[product] = sales;
-  }
-  return {
-    forecastDate: requestedDate,
-    isPublicHoliday,
-    predictedSales,
-    source: text(result.source, "Forecast source"),
-  };
-}
-
 function parseIngredients(rows: RawRow[]): Ingredient[] {
   if (rows.length === 0) throw new Error("The ingredients table is empty.");
   const seen = new Set<string>();
@@ -411,18 +385,7 @@ export async function runAgent(input: {
         inputSchema: emptyInput,
         execute: async () => {
           countToolCall();
-          const response = await fetch("http://127.0.0.1:8000/forecast", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              forecast_date: input.forecastDate,
-              is_public_holiday: input.isPublicHoliday,
-            }),
-            cache: "no-store",
-            signal: AbortSignal.timeout(15000),
-          });
-          if (!response.ok) throw new Error("The saved forecast model could not run.");
-          const forecast = toForecast(await response.json(), input.forecastDate, input.isPublicHoliday);
+          const forecast = forecastDrinkSales(input.forecastDate, input.isPublicHoliday);
           context.forecast = forecast;
           return forecast;
         },

@@ -14,6 +14,24 @@ type AgentResponse = {
   error?: string;
 };
 
+async function readAgentResponse(response: Response): Promise<AgentResponse> {
+  if (response.status === 504) {
+    throw new Error("The agent took too long to respond. Please try again.");
+  }
+
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error("The server returned an invalid response. Please try again.");
+  }
+
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("The server returned an invalid response. Please try again.");
+  }
+  return result as AgentResponse;
+}
+
 export function AgentPanel({ initialDraft }: AgentPanelProps) {
   const [passcode, setPasscode] = useState("");
   const [requestText, setRequestText] = useState("Check what ingredients need replenishing.");
@@ -36,7 +54,7 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ passcode, request: requestText, forecastDate, isPublicHoliday }),
       });
-      const result = await response.json() as AgentResponse;
+      const result = await readAgentResponse(response);
       if (!response.ok) throw new Error(result.error || "The agent could not complete the request.");
       setDraft(result.draft ?? null);
       setAnswer(result.answer || "The agent finished without a text response.");
@@ -60,7 +78,7 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ passcode, draftId: draft.id }),
       });
-      const result = await response.json() as AgentResponse & { status?: string };
+      const result = await readAgentResponse(response);
       if (!response.ok) throw new Error(result.error || "The draft could not be approved.");
       setDraft({ ...draft, status: "approved" });
     } catch (approvalError) {
