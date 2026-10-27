@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { InventoryItem, StockStatus } from "@/lib/inventory/model";
 import { recordMovement, type MovementState } from "./actions";
 import styles from "./inventory.module.css";
@@ -41,6 +41,11 @@ function UpdateForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean
 }
 
 export default function InventoryPanel({ items, canWrite }: { items: InventoryItem[]; canWrite: boolean }) {
+  const [mounted, setMounted] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
@@ -75,7 +80,7 @@ export default function InventoryPanel({ items, canWrite }: { items: InventoryIt
           <td>{item.quantity === null ? "—" : `${numberFormat.format(item.quantity)} ${item.unit}`}</td>
           <td>{item.minimum === null ? "Not set" : `${numberFormat.format(item.minimum)} ${item.unit}`}</td>
           <td><span className={`${styles.badge} ${statusClass(item.status)}`}>{item.status}</span></td>
-          <td>{item.updated && Number.isFinite(Date.parse(item.updated)) ? <time dateTime={item.updated}>{dateFormat.format(new Date(item.updated))}</time> : "—"}</td>
+          <td>{item.updated && Number.isFinite(Date.parse(item.updated)) ? <time dateTime={item.updated}>{mounted ? dateFormat.format(new Date(item.updated)) : "—"}</time> : "—"}</td>
           <td><button className={styles.secondary} onClick={() => setSelected(item.id)} aria-label={`Update ${item.name}`}>Update</button></td>
         </tr>)}</tbody>
       </table></div>}
