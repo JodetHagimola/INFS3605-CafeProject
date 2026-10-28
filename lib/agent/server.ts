@@ -397,7 +397,7 @@ export async function runAgent(input: {
 
   const google = createGoogle({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY });
   const result = await generateText({
-    model: google("gemini-3.8-flash"),
+    model: google("gemini-3.6-flash"),
     instructions: AGENT_SYSTEM_PROMPT,
     prompt: [
       `Margaret's request: ${input.request}`,
