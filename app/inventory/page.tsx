@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { getInventory } from "@/lib/inventory/server";
 import InventoryPanel from "./inventory-panel";
 
-export const metadata: Metadata = { title: "Inventory | Cafe Inventory" };
+export const metadata: Metadata = { title: "Inventory | Brewlytics" };
 
 export default async function InventoryPage() {
   await connection();
@@ -11,12 +11,15 @@ export default async function InventoryPage() {
   return (
     <main className="page-shell">
       <header className="topbar">
-        <a className="wordmark" href="/">Cafe Inventory</a>
+        <a className="wordmark" href="/" aria-label="Brewlytics home">
+          <span className="wordmark-mark" aria-hidden="true">B</span>
+          <span>Brewlytics</span>
+        </a>
         <nav className="topbar-nav" aria-label="Main navigation">
-          <a href="/">Orders</a>
+          <a href="/orders">Orders</a>
           <a href="/inventory" aria-current="page">Inventory</a>
           <a href="/automated-ordering">AI Forecast</a>
-          <a href="/order-requests">Order requests</a>
+          <a href="/order-requests">Supply requests</a>
         </nav>
       </header>
       <section style={{ margin: "40px 0 64px" }} aria-labelledby="inventory-title">

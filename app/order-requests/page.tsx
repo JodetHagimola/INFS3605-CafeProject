@@ -5,7 +5,7 @@ import { getOrderRequests } from "@/lib/order-requests/server";
 import { DecisionForm } from "./decision-form";
 import { OrderRequestForm } from "./order-request-form";
 
-export const metadata: Metadata = { title: "Order requests | Cafe Inventory" };
+export const metadata: Metadata = { title: "Supply requests | Brewlytics" };
 
 function RequestCard({ request }: { request: OrderRequest }) {
   return (
@@ -59,15 +59,15 @@ export default async function OrderRequestsPage() {
   return (
     <main className="page-shell">
       <header className="topbar">
-        <a className="wordmark" href="/" aria-label="Cafe Inventory home">
-          <span className="wordmark-mark" aria-hidden="true">C</span>
-          <span>Cafe Inventory</span>
+        <a className="wordmark" href="/" aria-label="Brewlytics home">
+          <span className="wordmark-mark" aria-hidden="true">B</span>
+          <span>Brewlytics</span>
         </a>
         <nav className="topbar-nav" aria-label="Main navigation">
-          <a href="/">Orders</a>
+          <a href="/orders">Orders</a>
           <a href="/inventory">Inventory</a>
           <a href="/automated-ordering">AI Forecast</a>
-          <a href="/order-requests" aria-current="page">Order requests</a>
+          <a href="/order-requests" aria-current="page">Supply requests</a>
         </nav>
       </header>
 
