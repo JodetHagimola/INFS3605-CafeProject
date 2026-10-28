@@ -1,0 +1,1178 @@
+{
+  "1-0-0": {
+    "Latte": 74,
+    "Cappuccino": 50,
+    "Flat White": 74,
+    "Long Black": 42,
+    "Mocha": 27
+  },
+  "1-0-1": {
+    "Latte": 60,
+    "Cappuccino": 34,
+    "Flat White": 50,
+    "Long Black": 26,
+    "Mocha": 20
+  },
+  "1-1-0": {
+    "Latte": 78,
+    "Cappuccino": 51,
+    "Flat White": 71,
+    "Long Black": 41,
+    "Mocha": 29
+  },
+  "1-1-1": {
+    "Latte": 60,
+    "Cappuccino": 33,
+    "Flat White": 50,
+    "Long Black": 26,
+    "Mocha": 21
+  },
+  "1-2-0": {
+    "Latte": 81,
+    "Cappuccino": 51,
+    "Flat White": 62,
+    "Long Black": 40,
+    "Mocha": 29
+  },
+  "1-2-1": {
+    "Latte": 60,
+    "Cappuccino": 33,
+    "Flat White": 50,
+    "Long Black": 25,
+    "Mocha": 22
+  },
+  "1-3-0": {
+    "Latte": 76,
+    "Cappuccino": 50,
+    "Flat White": 65,
+    "Long Black": 40,
+    "Mocha": 29
+  },
+  "1-3-1": {
+    "Latte": 59,
+    "Cappuccino": 33,
+    "Flat White": 49,
+    "Long Black": 25,
+    "Mocha": 22
+  },
+  "1-4-0": {
+    "Latte": 75,
+    "Cappuccino": 52,
+    "Flat White": 69,
+    "Long Black": 40,
+    "Mocha": 29
+  },
+  "1-4-1": {
+    "Latte": 59,
+    "Cappuccino": 34,
+    "Flat White": 48,
+    "Long Black": 25,
+    "Mocha": 22
+  },
+  "1-5-0": {
+    "Latte": 95,
+    "Cappuccino": 65,
+    "Flat White": 83,
+    "Long Black": 49,
+    "Mocha": 36
+  },
+  "1-5-1": {
+    "Latte": 80,
+    "Cappuccino": 48,
+    "Flat White": 77,
+    "Long Black": 39,
+    "Mocha": 35
+  },
+  "1-6-0": {
+    "Latte": 94,
+    "Cappuccino": 62,
+    "Flat White": 87,
+    "Long Black": 48,
+    "Mocha": 34
+  },
+  "1-6-1": {
+    "Latte": 82,
+    "Cappuccino": 47,
+    "Flat White": 79,
+    "Long Black": 38,
+    "Mocha": 34
+  },
+  "2-0-0": {
+    "Latte": 80,
+    "Cappuccino": 50,
+    "Flat White": 73,
+    "Long Black": 42,
+    "Mocha": 30
+  },
+  "2-0-1": {
+    "Latte": 60,
+    "Cappuccino": 34,
+    "Flat White": 50,
+    "Long Black": 26,
+    "Mocha": 22
+  },
+  "2-1-0": {
+    "Latte": 76,
+    "Cappuccino": 53,
+    "Flat White": 72,
+    "Long Black": 40,
+    "Mocha": 30
+  },
+  "2-1-1": {
+    "Latte": 60,
+    "Cappuccino": 34,
+    "Flat White": 50,
+    "Long Black": 26,
+    "Mocha": 21
+  },
+  "2-2-0": {
+    "Latte": 82,
+    "Cappuccino": 52,
+    "Flat White": 72,
+    "Long Black": 40,
+    "Mocha": 29
+  },
+  "2-2-1": {
+    "Latte": 60,
+    "Cappuccino": 33,
+    "Flat White": 50,
+    "Long Black": 25,
+    "Mocha": 22
+  },
+  "2-3-0": {
+    "Latte": 81,
+    "Cappuccino": 50,
+    "Flat White": 72,
+    "Long Black": 39,
+    "Mocha": 29
+  },
+  "2-3-1": {
+    "Latte": 59,
+    "Cappuccino": 33,
+    "Flat White": 49,
+    "Long Black": 25,
+    "Mocha": 22
+  },
+  "2-4-0": {
+    "Latte": 73,
+    "Cappuccino": 52,
+    "Flat White": 78,
+    "Long Black": 39,
+    "Mocha": 32
+  },
+  "2-4-1": {
+    "Latte": 58,
+    "Cappuccino": 34,
+    "Flat White": 48,
+    "Long Black": 25,
+    "Mocha": 24
+  },
+  "2-5-0": {
+    "Latte": 101,
+    "Cappuccino": 63,
+    "Flat White": 87,
+    "Long Black": 50,
+    "Mocha": 35
+  },
+  "2-5-1": {
+    "Latte": 81,
+    "Cappuccino": 48,
+    "Flat White": 78,
+    "Long Black": 39,
+    "Mocha": 34
+  },
+  "2-6-0": {
+    "Latte": 101,
+    "Cappuccino": 61,
+    "Flat White": 94,
+    "Long Black": 51,
+    "Mocha": 38
+  },
+  "2-6-1": {
+    "Latte": 83,
+    "Cappuccino": 47,
+    "Flat White": 80,
+    "Long Black": 38,
+    "Mocha": 37
+  },
+  "3-0-0": {
+    "Latte": 88,
+    "Cappuccino": 59,
+    "Flat White": 81,
+    "Long Black": 43,
+    "Mocha": 34
+  },
+  "3-0-1": {
+    "Latte": 66,
+    "Cappuccino": 40,
+    "Flat White": 53,
+    "Long Black": 29,
+    "Mocha": 26
+  },
+  "3-1-0": {
+    "Latte": 93,
+    "Cappuccino": 57,
+    "Flat White": 81,
+    "Long Black": 42,
+    "Mocha": 34
+  },
+  "3-1-1": {
+    "Latte": 66,
+    "Cappuccino": 40,
+    "Flat White": 52,
+    "Long Black": 29,
+    "Mocha": 26
+  },
+  "3-2-0": {
+    "Latte": 89,
+    "Cappuccino": 54,
+    "Flat White": 77,
+    "Long Black": 43,
+    "Mocha": 34
+  },
+  "3-2-1": {
+    "Latte": 66,
+    "Cappuccino": 40,
+    "Flat White": 52,
+    "Long Black": 28,
+    "Mocha": 26
+  },
+  "3-3-0": {
+    "Latte": 90,
+    "Cappuccino": 54,
+    "Flat White": 77,
+    "Long Black": 43,
+    "Mocha": 34
+  },
+  "3-3-1": {
+    "Latte": 65,
+    "Cappuccino": 39,
+    "Flat White": 50,
+    "Long Black": 29,
+    "Mocha": 26
+  },
+  "3-4-0": {
+    "Latte": 88,
+    "Cappuccino": 55,
+    "Flat White": 80,
+    "Long Black": 43,
+    "Mocha": 37
+  },
+  "3-4-1": {
+    "Latte": 63,
+    "Cappuccino": 39,
+    "Flat White": 49,
+    "Long Black": 28,
+    "Mocha": 28
+  },
+  "3-5-0": {
+    "Latte": 109,
+    "Cappuccino": 67,
+    "Flat White": 101,
+    "Long Black": 52,
+    "Mocha": 44
+  },
+  "3-5-1": {
+    "Latte": 81,
+    "Cappuccino": 48,
+    "Flat White": 77,
+    "Long Black": 39,
+    "Mocha": 35
+  },
+  "3-6-0": {
+    "Latte": 104,
+    "Cappuccino": 63,
+    "Flat White": 102,
+    "Long Black": 50,
+    "Mocha": 42
+  },
+  "3-6-1": {
+    "Latte": 83,
+    "Cappuccino": 47,
+    "Flat White": 78,
+    "Long Black": 38,
+    "Mocha": 35
+  },
+  "4-0-0": {
+    "Latte": 88,
+    "Cappuccino": 52,
+    "Flat White": 75,
+    "Long Black": 38,
+    "Mocha": 34
+  },
+  "4-0-1": {
+    "Latte": 67,
+    "Cappuccino": 41,
+    "Flat White": 54,
+    "Long Black": 33,
+    "Mocha": 27
+  },
+  "4-1-0": {
+    "Latte": 88,
+    "Cappuccino": 56,
+    "Flat White": 78,
+    "Long Black": 40,
+    "Mocha": 35
+  },
+  "4-1-1": {
+    "Latte": 68,
+    "Cappuccino": 40,
+    "Flat White": 54,
+    "Long Black": 33,
+    "Mocha": 27
+  },
+  "4-2-0": {
+    "Latte": 90,
+    "Cappuccino": 56,
+    "Flat White": 76,
+    "Long Black": 42,
+    "Mocha": 35
+  },
+  "4-2-1": {
+    "Latte": 68,
+    "Cappuccino": 40,
+    "Flat White": 53,
+    "Long Black": 33,
+    "Mocha": 27
+  },
+  "4-3-0": {
+    "Latte": 88,
+    "Cappuccino": 56,
+    "Flat White": 75,
+    "Long Black": 41,
+    "Mocha": 35
+  },
+  "4-3-1": {
+    "Latte": 66,
+    "Cappuccino": 39,
+    "Flat White": 51,
+    "Long Black": 33,
+    "Mocha": 27
+  },
+  "4-4-0": {
+    "Latte": 86,
+    "Cappuccino": 55,
+    "Flat White": 71,
+    "Long Black": 41,
+    "Mocha": 42
+  },
+  "4-4-1": {
+    "Latte": 65,
+    "Cappuccino": 39,
+    "Flat White": 50,
+    "Long Black": 33,
+    "Mocha": 31
+  },
+  "4-5-0": {
+    "Latte": 110,
+    "Cappuccino": 60,
+    "Flat White": 93,
+    "Long Black": 49,
+    "Mocha": 44
+  },
+  "4-5-1": {
+    "Latte": 83,
+    "Cappuccino": 47,
+    "Flat White": 73,
+    "Long Black": 39,
+    "Mocha": 35
+  },
+  "4-6-0": {
+    "Latte": 107,
+    "Cappuccino": 70,
+    "Flat White": 96,
+    "Long Black": 45,
+    "Mocha": 43
+  },
+  "4-6-1": {
+    "Latte": 85,
+    "Cappuccino": 47,
+    "Flat White": 74,
+    "Long Black": 38,
+    "Mocha": 35
+  },
+  "5-0-0": {
+    "Latte": 97,
+    "Cappuccino": 61,
+    "Flat White": 86,
+    "Long Black": 45,
+    "Mocha": 40
+  },
+  "5-0-1": {
+    "Latte": 75,
+    "Cappuccino": 45,
+    "Flat White": 75,
+    "Long Black": 41,
+    "Mocha": 36
+  },
+  "5-1-0": {
+    "Latte": 96,
+    "Cappuccino": 61,
+    "Flat White": 83,
+    "Long Black": 47,
+    "Mocha": 42
+  },
+  "5-1-1": {
+    "Latte": 75,
+    "Cappuccino": 45,
+    "Flat White": 74,
+    "Long Black": 42,
+    "Mocha": 39
+  },
+  "5-2-0": {
+    "Latte": 93,
+    "Cappuccino": 63,
+    "Flat White": 89,
+    "Long Black": 47,
+    "Mocha": 42
+  },
+  "5-2-1": {
+    "Latte": 74,
+    "Cappuccino": 46,
+    "Flat White": 77,
+    "Long Black": 42,
+    "Mocha": 39
+  },
+  "5-3-0": {
+    "Latte": 94,
+    "Cappuccino": 59,
+    "Flat White": 94,
+    "Long Black": 46,
+    "Mocha": 42
+  },
+  "5-3-1": {
+    "Latte": 74,
+    "Cappuccino": 44,
+    "Flat White": 80,
+    "Long Black": 41,
+    "Mocha": 39
+  },
+  "5-4-0": {
+    "Latte": 98,
+    "Cappuccino": 59,
+    "Flat White": 87,
+    "Long Black": 46,
+    "Mocha": 44
+  },
+  "5-4-1": {
+    "Latte": 74,
+    "Cappuccino": 44,
+    "Flat White": 76,
+    "Long Black": 41,
+    "Mocha": 41
+  },
+  "5-5-0": {
+    "Latte": 118,
+    "Cappuccino": 74,
+    "Flat White": 105,
+    "Long Black": 57,
+    "Mocha": 48
+  },
+  "5-5-1": {
+    "Latte": 115,
+    "Cappuccino": 72,
+    "Flat White": 100,
+    "Long Black": 55,
+    "Mocha": 46
+  },
+  "5-6-0": {
+    "Latte": 120,
+    "Cappuccino": 72,
+    "Flat White": 106,
+    "Long Black": 53,
+    "Mocha": 49
+  },
+  "5-6-1": {
+    "Latte": 117,
+    "Cappuccino": 69,
+    "Flat White": 101,
+    "Long Black": 51,
+    "Mocha": 47
+  },
+  "6-0-0": {
+    "Latte": 95,
+    "Cappuccino": 62,
+    "Flat White": 92,
+    "Long Black": 45,
+    "Mocha": 40
+  },
+  "6-0-1": {
+    "Latte": 76,
+    "Cappuccino": 46,
+    "Flat White": 78,
+    "Long Black": 40,
+    "Mocha": 36
+  },
+  "6-1-0": {
+    "Latte": 95,
+    "Cappuccino": 62,
+    "Flat White": 90,
+    "Long Black": 46,
+    "Mocha": 42
+  },
+  "6-1-1": {
+    "Latte": 77,
+    "Cappuccino": 46,
+    "Flat White": 78,
+    "Long Black": 42,
+    "Mocha": 39
+  },
+  "6-2-0": {
+    "Latte": 96,
+    "Cappuccino": 64,
+    "Flat White": 88,
+    "Long Black": 47,
+    "Mocha": 42
+  },
+  "6-2-1": {
+    "Latte": 77,
+    "Cappuccino": 46,
+    "Flat White": 75,
+    "Long Black": 42,
+    "Mocha": 39
+  },
+  "6-3-0": {
+    "Latte": 96,
+    "Cappuccino": 58,
+    "Flat White": 92,
+    "Long Black": 46,
+    "Mocha": 42
+  },
+  "6-3-1": {
+    "Latte": 76,
+    "Cappuccino": 44,
+    "Flat White": 78,
+    "Long Black": 42,
+    "Mocha": 40
+  },
+  "6-4-0": {
+    "Latte": 100,
+    "Cappuccino": 59,
+    "Flat White": 86,
+    "Long Black": 47,
+    "Mocha": 44
+  },
+  "6-4-1": {
+    "Latte": 76,
+    "Cappuccino": 45,
+    "Flat White": 75,
+    "Long Black": 42,
+    "Mocha": 42
+  },
+  "6-5-0": {
+    "Latte": 122,
+    "Cappuccino": 81,
+    "Flat White": 112,
+    "Long Black": 56,
+    "Mocha": 49
+  },
+  "6-5-1": {
+    "Latte": 119,
+    "Cappuccino": 78,
+    "Flat White": 108,
+    "Long Black": 54,
+    "Mocha": 48
+  },
+  "6-6-0": {
+    "Latte": 114,
+    "Cappuccino": 80,
+    "Flat White": 113,
+    "Long Black": 52,
+    "Mocha": 49
+  },
+  "6-6-1": {
+    "Latte": 112,
+    "Cappuccino": 77,
+    "Flat White": 108,
+    "Long Black": 50,
+    "Mocha": 47
+  },
+  "7-0-0": {
+    "Latte": 98,
+    "Cappuccino": 66,
+    "Flat White": 97,
+    "Long Black": 46,
+    "Mocha": 46
+  },
+  "7-0-1": {
+    "Latte": 80,
+    "Cappuccino": 47,
+    "Flat White": 83,
+    "Long Black": 42,
+    "Mocha": 44
+  },
+  "7-1-0": {
+    "Latte": 98,
+    "Cappuccino": 66,
+    "Flat White": 91,
+    "Long Black": 47,
+    "Mocha": 48
+  },
+  "7-1-1": {
+    "Latte": 80,
+    "Cappuccino": 47,
+    "Flat White": 80,
+    "Long Black": 43,
+    "Mocha": 47
+  },
+  "7-2-0": {
+    "Latte": 109,
+    "Cappuccino": 67,
+    "Flat White": 92,
+    "Long Black": 47,
+    "Mocha": 48
+  },
+  "7-2-1": {
+    "Latte": 85,
+    "Cappuccino": 48,
+    "Flat White": 79,
+    "Long Black": 43,
+    "Mocha": 47
+  },
+  "7-3-0": {
+    "Latte": 107,
+    "Cappuccino": 64,
+    "Flat White": 93,
+    "Long Black": 46,
+    "Mocha": 48
+  },
+  "7-3-1": {
+    "Latte": 83,
+    "Cappuccino": 46,
+    "Flat White": 80,
+    "Long Black": 43,
+    "Mocha": 47
+  },
+  "7-4-0": {
+    "Latte": 106,
+    "Cappuccino": 63,
+    "Flat White": 90,
+    "Long Black": 46,
+    "Mocha": 49
+  },
+  "7-4-1": {
+    "Latte": 81,
+    "Cappuccino": 46,
+    "Flat White": 78,
+    "Long Black": 43,
+    "Mocha": 48
+  },
+  "7-5-0": {
+    "Latte": 131,
+    "Cappuccino": 75,
+    "Flat White": 109,
+    "Long Black": 55,
+    "Mocha": 54
+  },
+  "7-5-1": {
+    "Latte": 127,
+    "Cappuccino": 72,
+    "Flat White": 105,
+    "Long Black": 53,
+    "Mocha": 52
+  },
+  "7-6-0": {
+    "Latte": 128,
+    "Cappuccino": 77,
+    "Flat White": 112,
+    "Long Black": 51,
+    "Mocha": 51
+  },
+  "7-6-1": {
+    "Latte": 124,
+    "Cappuccino": 74,
+    "Flat White": 108,
+    "Long Black": 49,
+    "Mocha": 50
+  },
+  "8-0-0": {
+    "Latte": 102,
+    "Cappuccino": 66,
+    "Flat White": 92,
+    "Long Black": 47,
+    "Mocha": 45
+  },
+  "8-0-1": {
+    "Latte": 82,
+    "Cappuccino": 48,
+    "Flat White": 80,
+    "Long Black": 43,
+    "Mocha": 44
+  },
+  "8-1-0": {
+    "Latte": 101,
+    "Cappuccino": 66,
+    "Flat White": 93,
+    "Long Black": 49,
+    "Mocha": 48
+  },
+  "8-1-1": {
+    "Latte": 81,
+    "Cappuccino": 47,
+    "Flat White": 81,
+    "Long Black": 45,
+    "Mocha": 47
+  },
+  "8-2-0": {
+    "Latte": 102,
+    "Cappuccino": 67,
+    "Flat White": 96,
+    "Long Black": 49,
+    "Mocha": 48
+  },
+  "8-2-1": {
+    "Latte": 82,
+    "Cappuccino": 47,
+    "Flat White": 82,
+    "Long Black": 45,
+    "Mocha": 47
+  },
+  "8-3-0": {
+    "Latte": 102,
+    "Cappuccino": 65,
+    "Flat White": 96,
+    "Long Black": 49,
+    "Mocha": 48
+  },
+  "8-3-1": {
+    "Latte": 81,
+    "Cappuccino": 47,
+    "Flat White": 82,
+    "Long Black": 45,
+    "Mocha": 47
+  },
+  "8-4-0": {
+    "Latte": 105,
+    "Cappuccino": 64,
+    "Flat White": 93,
+    "Long Black": 49,
+    "Mocha": 50
+  },
+  "8-4-1": {
+    "Latte": 82,
+    "Cappuccino": 46,
+    "Flat White": 80,
+    "Long Black": 45,
+    "Mocha": 49
+  },
+  "8-5-0": {
+    "Latte": 127,
+    "Cappuccino": 78,
+    "Flat White": 110,
+    "Long Black": 62,
+    "Mocha": 54
+  },
+  "8-5-1": {
+    "Latte": 124,
+    "Cappuccino": 75,
+    "Flat White": 106,
+    "Long Black": 59,
+    "Mocha": 52
+  },
+  "8-6-0": {
+    "Latte": 121,
+    "Cappuccino": 77,
+    "Flat White": 111,
+    "Long Black": 59,
+    "Mocha": 51
+  },
+  "8-6-1": {
+    "Latte": 118,
+    "Cappuccino": 75,
+    "Flat White": 106,
+    "Long Black": 56,
+    "Mocha": 50
+  },
+  "9-0-0": {
+    "Latte": 99,
+    "Cappuccino": 65,
+    "Flat White": 87,
+    "Long Black": 44,
+    "Mocha": 40
+  },
+  "9-0-1": {
+    "Latte": 81,
+    "Cappuccino": 46,
+    "Flat White": 77,
+    "Long Black": 39,
+    "Mocha": 38
+  },
+  "9-1-0": {
+    "Latte": 99,
+    "Cappuccino": 65,
+    "Flat White": 91,
+    "Long Black": 47,
+    "Mocha": 42
+  },
+  "9-1-1": {
+    "Latte": 82,
+    "Cappuccino": 46,
+    "Flat White": 79,
+    "Long Black": 42,
+    "Mocha": 41
+  },
+  "9-2-0": {
+    "Latte": 100,
+    "Cappuccino": 65,
+    "Flat White": 87,
+    "Long Black": 47,
+    "Mocha": 42
+  },
+  "9-2-1": {
+    "Latte": 82,
+    "Cappuccino": 46,
+    "Flat White": 76,
+    "Long Black": 42,
+    "Mocha": 41
+  },
+  "9-3-0": {
+    "Latte": 100,
+    "Cappuccino": 63,
+    "Flat White": 88,
+    "Long Black": 47,
+    "Mocha": 42
+  },
+  "9-3-1": {
+    "Latte": 81,
+    "Cappuccino": 45,
+    "Flat White": 76,
+    "Long Black": 42,
+    "Mocha": 41
+  },
+  "9-4-0": {
+    "Latte": 97,
+    "Cappuccino": 62,
+    "Flat White": 87,
+    "Long Black": 46,
+    "Mocha": 43
+  },
+  "9-4-1": {
+    "Latte": 79,
+    "Cappuccino": 45,
+    "Flat White": 76,
+    "Long Black": 41,
+    "Mocha": 42
+  },
+  "9-5-0": {
+    "Latte": 110,
+    "Cappuccino": 75,
+    "Flat White": 102,
+    "Long Black": 56,
+    "Mocha": 50
+  },
+  "9-5-1": {
+    "Latte": 108,
+    "Cappuccino": 73,
+    "Flat White": 98,
+    "Long Black": 54,
+    "Mocha": 48
+  },
+  "9-6-0": {
+    "Latte": 124,
+    "Cappuccino": 73,
+    "Flat White": 111,
+    "Long Black": 54,
+    "Mocha": 48
+  },
+  "9-6-1": {
+    "Latte": 120,
+    "Cappuccino": 71,
+    "Flat White": 107,
+    "Long Black": 52,
+    "Mocha": 46
+  },
+  "10-0-0": {
+    "Latte": 83,
+    "Cappuccino": 61,
+    "Flat White": 83,
+    "Long Black": 43,
+    "Mocha": 36
+  },
+  "10-0-1": {
+    "Latte": 75,
+    "Cappuccino": 43,
+    "Flat White": 64,
+    "Long Black": 34,
+    "Mocha": 28
+  },
+  "10-1-0": {
+    "Latte": 92,
+    "Cappuccino": 61,
+    "Flat White": 85,
+    "Long Black": 43,
+    "Mocha": 38
+  },
+  "10-1-1": {
+    "Latte": 79,
+    "Cappuccino": 43,
+    "Flat White": 66,
+    "Long Black": 33,
+    "Mocha": 31
+  },
+  "10-2-0": {
+    "Latte": 95,
+    "Cappuccino": 60,
+    "Flat White": 90,
+    "Long Black": 45,
+    "Mocha": 38
+  },
+  "10-2-1": {
+    "Latte": 80,
+    "Cappuccino": 42,
+    "Flat White": 65,
+    "Long Black": 34,
+    "Mocha": 32
+  },
+  "10-3-0": {
+    "Latte": 92,
+    "Cappuccino": 59,
+    "Flat White": 78,
+    "Long Black": 46,
+    "Mocha": 38
+  },
+  "10-3-1": {
+    "Latte": 78,
+    "Cappuccino": 42,
+    "Flat White": 60,
+    "Long Black": 34,
+    "Mocha": 32
+  },
+  "10-4-0": {
+    "Latte": 96,
+    "Cappuccino": 60,
+    "Flat White": 84,
+    "Long Black": 46,
+    "Mocha": 42
+  },
+  "10-4-1": {
+    "Latte": 79,
+    "Cappuccino": 42,
+    "Flat White": 63,
+    "Long Black": 34,
+    "Mocha": 35
+  },
+  "10-5-0": {
+    "Latte": 116,
+    "Cappuccino": 72,
+    "Flat White": 106,
+    "Long Black": 53,
+    "Mocha": 48
+  },
+  "10-5-1": {
+    "Latte": 114,
+    "Cappuccino": 70,
+    "Flat White": 103,
+    "Long Black": 51,
+    "Mocha": 46
+  },
+  "10-6-0": {
+    "Latte": 113,
+    "Cappuccino": 68,
+    "Flat White": 99,
+    "Long Black": 51,
+    "Mocha": 46
+  },
+  "10-6-1": {
+    "Latte": 111,
+    "Cappuccino": 66,
+    "Flat White": 95,
+    "Long Black": 49,
+    "Mocha": 45
+  },
+  "11-0-0": {
+    "Latte": 84,
+    "Cappuccino": 58,
+    "Flat White": 81,
+    "Long Black": 44,
+    "Mocha": 32
+  },
+  "11-0-1": {
+    "Latte": 71,
+    "Cappuccino": 42,
+    "Flat White": 63,
+    "Long Black": 34,
+    "Mocha": 25
+  },
+  "11-1-0": {
+    "Latte": 87,
+    "Cappuccino": 61,
+    "Flat White": 82,
+    "Long Black": 44,
+    "Mocha": 34
+  },
+  "11-1-1": {
+    "Latte": 72,
+    "Cappuccino": 43,
+    "Flat White": 63,
+    "Long Black": 34,
+    "Mocha": 26
+  },
+  "11-2-0": {
+    "Latte": 80,
+    "Cappuccino": 60,
+    "Flat White": 80,
+    "Long Black": 46,
+    "Mocha": 34
+  },
+  "11-2-1": {
+    "Latte": 69,
+    "Cappuccino": 42,
+    "Flat White": 60,
+    "Long Black": 35,
+    "Mocha": 26
+  },
+  "11-3-0": {
+    "Latte": 85,
+    "Cappuccino": 58,
+    "Flat White": 78,
+    "Long Black": 47,
+    "Mocha": 33
+  },
+  "11-3-1": {
+    "Latte": 71,
+    "Cappuccino": 42,
+    "Flat White": 59,
+    "Long Black": 35,
+    "Mocha": 26
+  },
+  "11-4-0": {
+    "Latte": 87,
+    "Cappuccino": 58,
+    "Flat White": 80,
+    "Long Black": 47,
+    "Mocha": 35
+  },
+  "11-4-1": {
+    "Latte": 71,
+    "Cappuccino": 42,
+    "Flat White": 60,
+    "Long Black": 35,
+    "Mocha": 27
+  },
+  "11-5-0": {
+    "Latte": 105,
+    "Cappuccino": 71,
+    "Flat White": 99,
+    "Long Black": 56,
+    "Mocha": 45
+  },
+  "11-5-1": {
+    "Latte": 103,
+    "Cappuccino": 69,
+    "Flat White": 95,
+    "Long Black": 54,
+    "Mocha": 44
+  },
+  "11-6-0": {
+    "Latte": 116,
+    "Cappuccino": 74,
+    "Flat White": 109,
+    "Long Black": 54,
+    "Mocha": 44
+  },
+  "11-6-1": {
+    "Latte": 113,
+    "Cappuccino": 72,
+    "Flat White": 104,
+    "Long Black": 51,
+    "Mocha": 43
+  },
+  "12-0-0": {
+    "Latte": 78,
+    "Cappuccino": 51,
+    "Flat White": 72,
+    "Long Black": 40,
+    "Mocha": 29
+  },
+  "12-0-1": {
+    "Latte": 61,
+    "Cappuccino": 35,
+    "Flat White": 57,
+    "Long Black": 31,
+    "Mocha": 21
+  },
+  "12-1-0": {
+    "Latte": 80,
+    "Cappuccino": 55,
+    "Flat White": 72,
+    "Long Black": 41,
+    "Mocha": 32
+  },
+  "12-1-1": {
+    "Latte": 61,
+    "Cappuccino": 35,
+    "Flat White": 57,
+    "Long Black": 31,
+    "Mocha": 22
+  },
+  "12-2-0": {
+    "Latte": 74,
+    "Cappuccino": 56,
+    "Flat White": 71,
+    "Long Black": 41,
+    "Mocha": 32
+  },
+  "12-2-1": {
+    "Latte": 60,
+    "Cappuccino": 35,
+    "Flat White": 53,
+    "Long Black": 31,
+    "Mocha": 22
+  },
+  "12-3-0": {
+    "Latte": 72,
+    "Cappuccino": 53,
+    "Flat White": 73,
+    "Long Black": 41,
+    "Mocha": 32
+  },
+  "12-3-1": {
+    "Latte": 59,
+    "Cappuccino": 35,
+    "Flat White": 53,
+    "Long Black": 31,
+    "Mocha": 22
+  },
+  "12-4-0": {
+    "Latte": 79,
+    "Cappuccino": 52,
+    "Flat White": 74,
+    "Long Black": 39,
+    "Mocha": 34
+  },
+  "12-4-1": {
+    "Latte": 61,
+    "Cappuccino": 35,
+    "Flat White": 53,
+    "Long Black": 31,
+    "Mocha": 24
+  },
+  "12-5-0": {
+    "Latte": 98,
+    "Cappuccino": 57,
+    "Flat White": 90,
+    "Long Black": 51,
+    "Mocha": 35
+  },
+  "12-5-1": {
+    "Latte": 97,
+    "Cappuccino": 56,
+    "Flat White": 88,
+    "Long Black": 50,
+    "Mocha": 35
+  },
+  "12-6-0": {
+    "Latte": 104,
+    "Cappuccino": 62,
+    "Flat White": 97,
+    "Long Black": 53,
+    "Mocha": 39
+  },
+  "12-6-1": {
+    "Latte": 103,
+    "Cappuccino": 60,
+    "Flat White": 94,
+    "Long Black": 51,
+    "Mocha": 39
+  }
+}

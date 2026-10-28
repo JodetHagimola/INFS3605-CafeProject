@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import joblib
@@ -81,3 +82,29 @@ print(f'Product + weekday baseline MAE: {weekday_mae:.2f} drinks')
 output_path = folder.parent / 'forecast_model.joblib'
 joblib.dump({'model': model, 'columns': X.columns.tolist(), 'features': best['features']}, output_path)
 print(f'\nModel saved to: {output_path}')
+
+# Export every valid forecast input so the Next.js agent can run without
+# depending on a separate Python service at runtime.
+products = ['Latte', 'Cappuccino', 'Flat White', 'Long Black', 'Mocha']
+forecast_table = {}
+for month in range(1, 13):
+    for day_number in range(7):
+        for holiday in (0, 1):
+            future = pd.DataFrame({
+                'product_name': products,
+                'day_number': [day_number] * len(products),
+                'month': [month] * len(products),
+                'holiday': [holiday] * len(products),
+            })
+            inputs = pd.get_dummies(future[best['features']], columns=['product_name'], dtype=int)
+            inputs = inputs.reindex(columns=X.columns, fill_value=0)
+            predictions = model.predict(inputs)
+            key = f'{month}-{day_number}-{holiday}'
+            forecast_table[key] = {
+                product: max(0, round(float(prediction)))
+                for product, prediction in zip(products, predictions)
+            }
+
+table_path = folder.parent / 'agent_forecast_table.json'
+table_path.write_text(json.dumps(forecast_table, indent=2) + '\n', encoding='utf-8')
+print(f'Agent forecast table saved to: {table_path}')
