@@ -12,7 +12,8 @@ export default async function InventoryPage() {
     <main className="page-shell">
       <header className="topbar">
         <a className="wordmark" href="/">Cafe Inventory</a>
-        <nav aria-label="Main navigation"><a href="/">Orders</a> / <a href="/inventory" aria-current="page">Inventory</a></nav>
+        <nav aria-label="Main navigation"><a href="/">Orders</a> / <a href="/inventory" aria-current="page">Inventory</a>
+          <a href="/inventory/sales">Record sale</a></nav>
       </header>
       <section style={{ margin: "40px 0 64px" }} aria-labelledby="inventory-title">
         <p className="eyebrow">DAILY OPERATIONS</p>
