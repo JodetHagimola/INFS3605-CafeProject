@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AgentActivity } from "@/lib/agent/activity-log";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
+import { LoadingButton, Skeleton } from "../ui/feedback";
 import styles from "./activity-panel.module.css";
 
 type ActivityResponse = { items?: AgentActivity[]; approvals?: ApprovalItem[]; error?: string };
@@ -26,7 +27,7 @@ export function ActivityPanel() {
   const [items, setItems] = useState<AgentActivity[]>([]);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
 
   async function load() {
     setBusy(true);
@@ -53,12 +54,15 @@ export function ActivityPanel() {
   }, []);
 
   return (
-    <div className={styles.panel}>
-      <button className="primary-button" type="button" disabled={busy} onClick={() => void load()}>
-        {busy ? "Loading..." : "Refresh activity"}
-      </button>
+    <div className={styles.panel} aria-busy={busy}>
+      <LoadingButton className="primary-button" type="button" busy={busy} busyLabel="Loading..." onClick={() => void load()}>
+        Refresh activity
+      </LoadingButton>
       {error && <p className="form-message error" role="alert">{error}</p>}
-      {busy && items.length === 0 && <p role="status">Loading activity...</p>}
+      {busy && items.length === 0 && <div className={styles.list} role="status" aria-live="polite">
+        <span className="sr-only">Loading activity...</span>
+        {Array.from({ length: 3 }, (_, index) => <Skeleton className="skeleton-row" key={index} />)}
+      </div>}
       {items.length === 0 ? (
         !busy && <div className="empty-state"><p>No activity to show yet.</p></div>
       ) : (
@@ -82,7 +86,12 @@ export function ActivityPanel() {
       )}
       <section aria-labelledby="approval-history-title">
         <h2 id="approval-history-title">Approval history</h2>
-        {approvals.filter((item) => item.status !== "pending_approval").length === 0 ? (
+        {busy && approvals.length === 0 ? (
+          <div className={styles.list} role="status" aria-live="polite">
+            <span className="sr-only">Loading approval history...</span>
+            {Array.from({ length: 2 }, (_, index) => <Skeleton className="skeleton-row" key={index} />)}
+          </div>
+        ) : approvals.filter((item) => item.status !== "pending_approval").length === 0 ? (
           <div className="empty-state"><p>No approval decisions have been recorded.</p></div>
         ) : (
           <div className={styles.list}>

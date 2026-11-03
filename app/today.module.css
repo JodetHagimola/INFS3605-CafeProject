@@ -1,13 +1,13 @@
 .brief {
   max-width: 860px;
   margin: 0 auto;
-  padding: 48px 0 80px;
+  padding: 48px 0 88px;
 }
 
 .brief > h1 {
   margin: 0;
   color: var(--coffee);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: clamp(42px, 8vw, 64px);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -28,7 +28,7 @@
 }
 
 .intro {
-  margin: 44px 0 28px;
+  margin: 48px 0 32px;
 }
 
 .intro p {
@@ -40,7 +40,7 @@
   max-width: 680px;
   margin: 0;
   color: var(--coffee);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: clamp(26px, 5vw, 36px);
   font-weight: 500;
   line-height: 1.2;
@@ -54,17 +54,48 @@
 .item,
 .emptyState {
   border: 1px solid var(--line);
-  border-left: 4px solid var(--coffee-light);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: var(--surface);
+  box-shadow: var(--shadow-soft);
   padding: clamp(18px, 4vw, 26px);
+}
+
+.item {
+  max-height: 1200px;
+  overflow: hidden;
+  transition: max-height var(--motion-base) var(--ease-soft), margin var(--motion-base) var(--ease-soft), padding var(--motion-base) var(--ease-soft), opacity var(--motion-base) var(--ease-soft), transform var(--motion-base) var(--ease-soft);
+}
+
+.itemCollapsing {
+  max-height: 0;
+  margin: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateY(-6px);
+}
+
+.items > .item {
+  animation: card-enter 350ms var(--ease-soft) both;
+}
+
+.items > .item:nth-child(2) { animation-delay: 50ms; }
+.items > .item:nth-child(3) { animation-delay: 100ms; }
+.items > .item:nth-child(4) { animation-delay: 150ms; }
+.items > .item:nth-child(5) { animation-delay: 200ms; }
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
 }
 
 .item h2,
 .emptyState h2 {
   margin: 0;
   color: var(--coffee);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 23px;
   font-weight: 500;
   line-height: 1.25;
@@ -88,20 +119,32 @@
 
 .emptyState {
   margin-top: 32px;
-  border-left-color: var(--green);
 }
 
 .details {
   margin-top: 30px;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
+  border-radius: var(--radius-soft);
+  background: rgb(255 253 249 / 55%);
+  padding: 16px;
 }
 
 .details summary {
   width: fit-content;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--green-pale);
   color: var(--muted);
   cursor: pointer;
   font-size: 14px;
+  padding: 8px 16px;
+  transition: background-color var(--motion-fast) var(--ease-soft), color var(--motion-fast) var(--ease-soft);
+}
+
+.details summary:hover {
+  background: var(--coffee-light);
+  color: var(--coffee);
 }
 
 .detailsContent {
@@ -128,12 +171,13 @@
 .tableWrap table {
   width: 100%;
   border-collapse: collapse;
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 
 .tableWrap th,
 .tableWrap td {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgb(89 57 39 / 8%);
   padding: 9px 12px;
   text-align: left;
   white-space: nowrap;
@@ -142,6 +186,26 @@
 .tableWrap th {
   color: var(--ink);
   font-size: 12px;
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .items > .item {
+    animation: none;
+    transform: none;
+  }
+
+  .item {
+    transition: opacity 0.01ms linear;
+  }
+
+  .itemCollapsing {
+    transform: none;
+  }
 }
 
 @media (max-width: 600px) {

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { z } from "zod";
+import Link from "next/link";
 import { draftOrderSchema, type DraftOrderRecord } from "@/lib/agent/draft-schema";
+import { LoadingButton } from "../ui/feedback";
 import styles from "./agent-panel.module.css";
 
 type AgentPanelProps = {
@@ -101,10 +103,15 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
             onChange={(event) => setRequestText(event.target.value)}
           />
         </label>
-        <button className="primary-button" type="submit" disabled={busy}>
-          {busy ? "Working..." : "Run check"}
-        </button>
+        <LoadingButton className="primary-button" type="submit" busy={busy} busyLabel="Working...">
+          Run check
+        </LoadingButton>
       </form>
+
+      {busy && <p className="inline-status" role="status" aria-live="polite">
+        <span className="typing-dots" aria-hidden="true"><span /><span /><span /></span>
+        Checking your café data...
+      </p>}
 
       <p className={styles.note}>
         The agent reads café data and can save a draft, but cannot place or send
@@ -204,7 +211,7 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
               Review quantities, suppliers, alternatives, and flags. Any request
               to place or send an order must be created for owner review.
             </p>
-            <a className="primary-button" href="/?review=1">Review approval items</a>
+            <Link className="primary-button" href="/?review=1">Review approval items</Link>
           </div>
           : <p className={styles.approved}>You approved this draft. No supplier was contacted.</p>}
       </section>}

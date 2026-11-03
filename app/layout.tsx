@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { hasAgentSession } from "@/lib/agent/auth";
 import { AgentDock } from "./agent-dock";
 import { LoginScreen } from "./auth/login-screen";
+import { RouteProgress } from "./route-progress";
 
 export const metadata: Metadata = {
   title: "Brewlytics",
@@ -17,7 +19,7 @@ export default async function RootLayout({
   const authenticated = await hasAgentSession();
   return (
     <html lang="en">
-      <body>{authenticated ? <>{children}<AgentDock /></> : <LoginScreen />}</body>
+      <body>{authenticated ? <><Suspense fallback={null}><RouteProgress /></Suspense>{children}<AgentDock /></> : <LoginScreen />}</body>
     </html>
   );
 }

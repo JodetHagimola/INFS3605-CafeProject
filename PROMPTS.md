@@ -173,3 +173,76 @@ Work in phases and tell me what changed and how to test it after each:
 6. Streamlined navigation, visual polish, cron pre-generation, wrap-up if time allows
 
 Keep TypeScript strict, handle errors, and don't add dependencies without telling me. Add a README section explaining the agent, its tools, tiers and boundaries.
+
+
+# Task: Refine Brewlytics UI so it feels rounded, soft and inviting, with smooth motion
+
+This is a visual and interaction polish pass only. Do not change agent logic, API routes, database code, auth behaviour or the data shown. Keep the existing colour palette (cream background, coffee-brown accents, dark brown text). Don't introduce new brand colours; only add tints, shades and shadows derived from the existing ones.
+
+## Step 0: Inspect first, change nothing yet
+1. Read the current styling approach (global CSS, Tailwind config, CSS modules, components) and find where the colours, fonts, borders and radii are defined.
+2. Extract the existing palette and fonts into a single set of design tokens (CSS variables) if they aren't already, and show me the list.
+3. Reply with a short plan (files you'll touch, any dependency you'd like to add and why). Prefer CSS-only animation. Don't add a dependency without asking. Wait for my approval.
+
+## 1. Softer, rounder visual language
+Problems to fix: the dark 2px brown rules along the top of cards and sections feel harsh, form inputs and textareas have sharp corners, and thin dividers look rigid.
+- Replace the heavy top-border rules with soft cards: generous radius (16-24px for cards, 12px for inputs, pill shape for buttons and badges), a faint tinted border at low contrast (e.g. brown at 8-12% opacity) and a gentle layered shadow (large blur, low opacity, warm brown tint rather than grey/black).
+- Inputs, textareas, date pickers and selects: rounded, slightly tinted fill, soft border, comfortable padding. On focus show a soft brown glow ring (not a harsh outline) that is still clearly visible for accessibility (WCAG AA contrast).
+- Dividers and underlines: remove or replace with spacing, subtle tinted separators, or soft background shifts. No full-width hard lines between sections.
+- Navigation: soft bottom edge (a subtle shadow or very faint border), a rounded pill highlight behind the active tab, and a smooth hover state. Slightly translucent, blurred sticky header is fine.
+- Badges, counters and status chips: pill-shaped with soft tinted backgrounds.
+- Warning/notice blocks (e.g. the peach boxes): rounded, softly tinted, no hard left bars unless it's an accent with rounded ends.
+- Typography: keep the serif headings and existing fonts. Improve spacing, line height and hierarchy so pages feel calmer and less cramped. Add more whitespace.
+- Buttons: pill-shaped, soft shadow, gentle hover lift (translateY -1px and a slightly stronger shadow) and press state (scale 0.98). Secondary buttons use a soft tinted fill instead of a harsh outline.
+- Consistent spacing scale and radius scale across every page and the chat dock. Make sure it looks good on mobile (touch targets at least 44px) and on wide screens.
+- The persistent chat dock: rounded panel (large radius), soft shadow, rounded message bubbles (user vs agent clearly distinguished with palette tints), rounded input with a send button, and a smooth, friendly launcher button.
+
+## 2. Page transitions
+- Add smooth transitions between routes. In the Next.js App Router, use app/template.tsx with a short enter animation (fade plus slight upward slide, about 250-350ms, ease-out) so each page eases in. Wrap it in a client component if needed.
+- Stagger the entrance of cards and list items on a page (each about 40-60ms after the previous, short and subtle).
+- Optionally use the View Transitions API progressively where supported, with a clean fallback. Don't build a fragile hack for exit animations.
+- Show a slim, soft top-of-page progress bar during route navigation (build it yourself; no heavy library).
+- The persistent chat dock must not re-animate or flicker on navigation.
+
+## 3. Loading indicators and feedback for every async task
+Add a consistent, friendly loading pattern with reusable components (e.g. `<Spinner />`, `<Skeleton />`, `<LoadingButton />`, `<InlineStatus />`):
+- Passcode validation (login/lock screen): the button shows an inline spinner, switches to "Checking..." and is disabled while the request runs. On success, a quick success tick then a smooth transition into the app. On failure, a gentle shake of the field plus a soft inline error message (no harsh red blocks; use a warm, readable tone). Keep the focus in the input.
+- Generating the daily brief: show skeleton cards in the shape of the real action cards, with a calm status line that updates as the agent works (e.g. "Checking stock...", "Looking at deliveries...", "Forecasting demand..."). If the app already streams tool status, use it; otherwise use friendly staged text. Fade the real content in over the skeletons.
+- Chat dock: a typing indicator (three softly pulsing dots) while the agent is thinking, subtle tool-status text while it works, and smooth streaming of text with new messages sliding up and fading in. Auto-scroll smoothly.
+- Approve / Reject / Save / Edit buttons: inline spinner on press, then a brief success state (tick, soft green-tinted, no new brand colour needed; derive from the palette) before the card gracefully collapses or updates. Disable duplicate clicks.
+- Lists and tables (Activity, history): skeleton rows while loading and a friendly empty state with a small illustration or icon and one calm sentence ("Nothing here yet.").
+- Settings actions: same loading button behaviour.
+- Never leave a blank screen or a frozen button with no feedback. Anything over about 300ms should show feedback.
+
+## 4. Micro-interactions
+- Cards lift slightly and gain a deeper shadow on hover (desktop only).
+- Chat dock opens and closes with a smooth scale and fade from the launcher button (about 200-250ms), with the launcher having a gentle idle state and a soft badge pulse when the agent has something new (one gentle pulse, not endless).
+- Dismissed or completed action cards collapse smoothly (height and opacity), and the cards below slide up.
+- Numbers or statuses that change should fade rather than snap.
+- Use consistent timing tokens: fast 150ms, base 250ms, slow 400ms, with a soft ease-out/ease-in-out curve.
+
+## 5. Accessibility and performance (required)
+- Respect `prefers-reduced-motion`: when set, disable transforms and long animations and keep only simple instant or opacity changes.
+- Animate only transform and opacity where possible, keep animations GPU-friendly and avoid layout thrash. No animation should block interaction or delay content by more than about 300ms.
+- Keep text contrast at WCAG AA or better, visible keyboard focus states, and aria attributes for loading states (`aria-busy`, `aria-live="polite"` on status text, spinner labels).
+- Don't hurt Lighthouse performance noticeably. No large images or heavy libraries.
+
+## 6. Acceptance checks (verify before saying you're done)
+- No hard 2px dark rules remain across cards or sections, and no sharp-cornered inputs remain on any page.
+- Every page eases in on navigation, the top progress bar appears during route changes, and the chat dock stays stable.
+- Passcode validation shows a spinner, a success transition and a gentle shake on failure.
+- The brief shows skeletons and friendly status text while generating, then fades into the real content.
+- All buttons that trigger async work show a loading state and prevent double-clicks.
+- Reduced-motion mode works. The site looks good and is usable at 375px wide and at desktop width.
+- Colours are unchanged in character (same cream, browns and text colours as before).
+
+## Working rules
+Work in phases and tell me what changed and how to check it after each:
+1. Plan and design tokens (Step 0)
+2. Global styles: cards, inputs, buttons, nav, dividers, badges
+3. Chat dock restyle
+4. Page transitions and the route progress bar
+5. Loading components and their integration (login, brief, chat, approvals, lists)
+6. Micro-interactions, reduced-motion handling, mobile and accessibility pass
+
+Keep TypeScript strict, keep changes visual only, and show me before/after summaries per page.

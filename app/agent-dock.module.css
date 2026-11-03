@@ -9,9 +9,22 @@
   height: min(680px, calc(100dvh - 120px));
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: var(--paper);
-  box-shadow: 0 20px 70px rgb(51 37 30 / 20%);
+  box-shadow: 0 24px 70px rgb(89 57 39 / 17%), 0 5px 18px rgb(89 57 39 / 8%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.98);
+  transform-origin: bottom right;
+  transition: opacity 220ms var(--ease-soft), transform 220ms var(--ease-soft), visibility 220ms;
+  visibility: hidden;
+}
+
+.panelOpen {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  visibility: visible;
 }
 
 .header {
@@ -19,7 +32,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgb(89 57 39 / 8%);
   background: var(--surface);
   padding: 14px 18px;
 }
@@ -38,7 +51,7 @@
 .header h2 {
   margin: 2px 0 0;
   color: var(--coffee);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 22px;
   font-weight: 500;
 }
@@ -52,19 +65,22 @@
 .headerActions button,
 .cardActions button,
 .cardActions a {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(89 57 39 / 10%);
+  border-radius: var(--radius-pill);
+  background: var(--green-pale);
   color: var(--ink);
-  padding: 7px 10px;
+  padding: 8px 13px;
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
 
 .headerActions .close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   font-size: 22px;
   line-height: 1;
@@ -78,19 +94,27 @@
   padding: 16px;
 }
 
+.historyLoading {
+  display: grid;
+  gap: 12px;
+}
+
 .ownerMessage,
 .agentMessage {
   max-width: 94%;
-  border-radius: 12px;
-  padding: 11px 13px;
+  border-radius: 18px;
+  padding: 13px 15px;
+  animation: card-enter 220ms var(--ease-soft) both;
 }
 
 .ownerMessage {
+  border-bottom-right-radius: 6px;
   align-self: end;
   background: var(--green-pale);
 }
 
 .agentMessage {
+  border-bottom-left-radius: 6px;
   align-self: start;
   width: 100%;
   background: var(--surface);
@@ -113,7 +137,7 @@
   gap: 9px;
   margin-top: 10px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--paper);
   padding: 12px;
 }
@@ -137,6 +161,12 @@
   border-color: var(--coffee);
   background: var(--coffee);
   color: var(--cream);
+}
+
+.cardActions .reject {
+  border-color: rgb(113 59 43 / 14%);
+  background: var(--rust-pale);
+  color: var(--rust-deep);
 }
 
 .cardActions button:disabled,
@@ -178,8 +208,11 @@
 
 .error {
   margin: 0 14px 10px;
-  color: var(--rust);
+  border-radius: var(--radius-control);
+  background: var(--rust-pale);
+  color: var(--rust-deep);
   font-size: 12px;
+  padding: 10px 12px;
 }
 
 .composer {
@@ -187,7 +220,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 9px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid rgb(89 57 39 / 8%);
   background: var(--surface);
   padding: 12px;
 }
@@ -197,7 +230,7 @@
   min-width: 0;
   resize: vertical;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--paper);
   color: var(--ink);
   padding: 9px 10px;
@@ -218,10 +251,17 @@
   border-radius: 50%;
   background: var(--coffee);
   color: var(--cream);
-  box-shadow: 0 6px 22px rgb(51 37 30 / 25%);
-  font-family: Georgia, "Times New Roman", serif;
+  box-shadow: 0 8px 24px rgb(89 57 39 / 22%);
+  font-family: var(--font-serif);
   font-size: 25px;
   cursor: pointer;
+  animation: launcher-breathe 3.2s ease-in-out infinite;
+  transition: transform var(--motion-fast) var(--ease-soft), box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgb(89 57 39 / 26%);
 }
 
 .badge {
@@ -233,19 +273,64 @@
   border: 2px solid var(--cream);
   border-radius: 50%;
   background: var(--rust);
+  animation: badge-pulse 1.4s ease-out 1;
 }
 
 @media (max-width: 600px) {
   .panel {
-    inset: 0;
-    width: 100%;
-    height: 100dvh;
-    border: 0;
-    border-radius: 0;
+    inset: 12px 12px 78px;
+    width: auto;
+    height: auto;
+    border-radius: var(--radius-card);
+    transform-origin: bottom center;
   }
 
   .launcher {
     right: 18px;
     bottom: 16px;
+  }
+}
+
+@keyframes launcher-breathe {
+  0%, 100% { box-shadow: 0 8px 24px rgb(89 57 39 / 20%); }
+  50% { box-shadow: 0 10px 28px rgb(89 57 39 / 25%); }
+}
+
+@keyframes badge-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(173 94 59 / 32%); }
+  100% { box-shadow: 0 0 0 9px rgb(173 94 59 / 0%); }
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .panelOpen {
+    transform: none;
+    transition: opacity 0.01ms linear, visibility 0.01ms linear;
+  }
+
+  .ownerMessage,
+  .agentMessage {
+    animation: none;
+  }
+
+  .ownerMessage:hover,
+  .agentMessage:hover {
+    transform: none;
+  }
+
+  .launcher:hover {
+    transform: none;
+  }
+}
+
+@media (hover: none) {
+  .launcher:hover {
+    transform: none;
+    box-shadow: 0 8px 24px rgb(89 57 39 / 22%);
   }
 }

@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { InventoryItem, StockStatus } from "@/lib/inventory/model";
 import { recordMovement, type MovementState } from "./actions";
+import { LoadingButton } from "../ui/feedback";
 import styles from "./inventory.module.css";
 
 const initial: MovementState = { status: "idle", message: "" };
@@ -12,8 +14,15 @@ const dateFormat = new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeS
 function UpdateForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean }) {
   const [state, action, pending] = useActionState(recordMovement, initial);
   const [kind, setKind] = useState("usage");
+  const [justSaved, setJustSaved] = useState(false);
   const unavailable = !canWrite || item.quantity === null || item.status === "Check data" || !item.updated;
-  return <form action={action} className={styles.form}>
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setJustSaved(true);
+    const timeout = window.setTimeout(() => setJustSaved(false), 900);
+    return () => window.clearTimeout(timeout);
+  }, [state]);
+  return <form action={action} className={styles.form} aria-busy={pending}>
     <input type="hidden" name="id" value={item.id} />
     <input type="hidden" name="updated" value={item.updated ?? ""} />
     <fieldset disabled={pending || unavailable}>
@@ -33,7 +42,15 @@ function UpdateForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean
         <input name="note" required maxLength={200} placeholder="e.g. Morning service" />
       </label>
       <p>This is the amount to add or subtract, not the total remaining. Record a delivery only after it arrives.</p>
-      <button type="submit">{pending ? "Saving…" : "Save stock change"}</button>
+      <LoadingButton
+        type="submit"
+        busy={pending}
+        busyLabel="Saving..."
+        success={justSaved && !pending}
+        successLabel="Saved"
+      >
+        Save stock change
+      </LoadingButton>
     </fieldset>
     {unavailable && <p>{!canWrite ? "Read-only preview. Stock changes require the private development demo." : "A valid inventory record and timestamp are required before making changes."}</p>}
     {state.message && <p role="status" className={state.status === "error" ? styles.error : styles.success}>{state.message}</p>}
@@ -41,6 +58,8 @@ function UpdateForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean
 }
 
 export default function InventoryPanel({ items, canWrite }: { items: InventoryItem[]; canWrite: boolean }) {
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
@@ -63,7 +82,15 @@ export default function InventoryPanel({ items, canWrite }: { items: InventoryIt
         <option value="all">All ingredients</option><option value="attention">Needs replenishment</option>
         {["Low stock", "Out of stock", "In stock", "Threshold not set", "No stock record", "Check data"].map(status => <option key={status}>{status}</option>)}
       </select></label>
-      <a className={styles.refresh} href="/inventory">Refresh stock</a>
+      <LoadingButton
+        type="button"
+        className={styles.refresh}
+        busy={refreshing}
+        busyLabel="Refreshing..."
+        onClick={() => startRefresh(() => router.refresh())}
+      >
+        Refresh stock
+      </LoadingButton>
     </div>
     <p aria-live="polite">Showing {visible.length} of {items.length} ingredients</p>
     {visible.length === 0 ? <div className="empty-state">{items.length === 0 ? "No ingredients have been added yet." : "No ingredients match these filters."}</div> :

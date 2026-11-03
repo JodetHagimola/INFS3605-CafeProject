@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { submitOrderRequest, type OrderRequestActionState } from "./actions";
+import { LoadingButton } from "../ui/feedback";
 
 type ItemFields = { key: number };
 const initialState: OrderRequestActionState = { status: "idle", message: "", resetVersion: 0 };
@@ -10,6 +11,7 @@ export function OrderRequestForm() {
   const [state, formAction, pending] = useActionState(submitOrderRequest, initialState);
   const [items, setItems] = useState<ItemFields[]>([{ key: 0 }]);
   const [nextKey, setNextKey] = useState(1);
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
   useEffect(() => {
     if (state.resetVersion > 0) {
@@ -17,6 +19,13 @@ export function OrderRequestForm() {
       setNextKey(state.resetVersion * 20 + 1);
     }
   }, [state.resetVersion]);
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setJustSubmitted(true);
+    const timeout = window.setTimeout(() => setJustSubmitted(false), 900);
+    return () => window.clearTimeout(timeout);
+  }, [state]);
 
   function addItem() {
     if (items.length >= 20) return;
@@ -29,7 +38,7 @@ export function OrderRequestForm() {
   }
 
   return (
-    <form className="request-form" action={formAction}>
+    <form className="request-form" action={formAction} aria-busy={pending}>
       <div className="request-form-grid">
         <label>
           Chef name
@@ -74,6 +83,7 @@ export function OrderRequestForm() {
               <button
                 className="remove-item-button"
                 type="button"
+                disabled={pending}
                 onClick={() => removeItem(item.key)}
                 aria-label={`Remove item ${index + 1}`}
               >
@@ -82,7 +92,7 @@ export function OrderRequestForm() {
             )}
           </div>
         ))}
-        <button className="text-button" type="button" onClick={addItem} disabled={items.length >= 20}>
+        <button className="text-button" type="button" onClick={addItem} disabled={pending || items.length >= 20}>
           + Add another item
         </button>
       </fieldset>
@@ -97,9 +107,9 @@ export function OrderRequestForm() {
           {state.message}
         </p>
       )}
-      <button className="primary-button" type="submit" disabled={pending}>
-        {pending ? "Submitting..." : "Submit for approval"}
-      </button>
+      <LoadingButton className="primary-button" type="submit" busy={pending} busyLabel="Submitting..." success={justSubmitted && !pending} successLabel="Submitted">
+        Submit for approval
+      </LoadingButton>
     </form>
   );
 }

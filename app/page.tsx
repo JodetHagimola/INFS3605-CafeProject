@@ -67,7 +67,7 @@ export default async function TodayPage({
             {brief.items.length > 0 ? (
               <div className={styles.items}>
                 {brief.items.map((item) => (
-                  <article className={styles.item} key={item.id}>
+                  <article className={styles.item} data-brief-action-card key={item.id}>
                     <h2>{item.title}</h2>
                     <p>{item.why}</p>
                     <p className={styles.actionTaken}>{item.actionTaken}</p>

@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { LoadingButton } from "../ui/feedback";
 import styles from "./login-screen.module.css";
 
 export function LoginScreen() {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const passcodeInput = useRef<HTMLInputElement>(null);
 
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
+    setSuccess(false);
+    setShaking(false);
     setError("");
 
     try {
@@ -29,9 +35,14 @@ export function LoginScreen() {
       }
 
       setPasscode("");
+      setSuccess(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 240));
       window.location.assign("/");
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Could not sign in.");
+      setShaking(true);
+      passcodeInput.current?.focus({ preventScroll: true });
+      window.setTimeout(() => setShaking(false), 350);
     } finally {
       setBusy(false);
     }
@@ -43,10 +54,12 @@ export function LoginScreen() {
         <p className={styles.eyebrow}>BREWLYTICS</p>
         <h1 id="login-title">Your café, in good hands.</h1>
         <p>Enter the shared passcode to open your workspace.</p>
-        <form onSubmit={login}>
+        <form onSubmit={login} aria-busy={busy}>
           <label htmlFor="agent-passcode">Passcode</label>
           <input
+            ref={passcodeInput}
             id="agent-passcode"
+            className={shaking ? styles.shaking : undefined}
             type="password"
             autoComplete="current-password"
             maxLength={128}
@@ -55,9 +68,10 @@ export function LoginScreen() {
             onChange={(event) => setPasscode(event.target.value)}
           />
           {error && <p className={styles.error} role="alert">{error}</p>}
-          <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? "Unlocking..." : "Continue"}
-          </button>
+          {success && <p className={styles.success} role="status" aria-live="polite"><span aria-hidden="true">✓</span> Welcome back</p>}
+          <LoadingButton className="primary-button" type="submit" busy={busy} busyLabel="Checking..." success={success} successLabel="Ready">
+            Continue
+          </LoadingButton>
         </form>
       </section>
     </main>

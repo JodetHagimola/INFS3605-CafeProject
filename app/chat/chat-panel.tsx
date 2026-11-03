@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { draftOrderSchema, type DraftOrderRecord } from "@/lib/agent/draft-schema";
+import { LoadingButton } from "../ui/feedback";
 import styles from "./chat-panel.module.css";
 
 type Message = {
@@ -123,6 +124,10 @@ export function ChatPanel() {
           ))}
       </div>
 
+      {busy && <p className="inline-status" role="status" aria-live="polite">
+        <span className="typing-dots" aria-hidden="true"><span /><span /><span /></span>
+        Working through your request...
+      </p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <form className={styles.composer} onSubmit={sendMessage}>
         <label htmlFor="agent-message">Message</label>
@@ -135,9 +140,9 @@ export function ChatPanel() {
           onChange={(event) => setRequestText(event.target.value)}
           placeholder="What do I need for the long weekend?"
         />
-        <button className="primary-button" type="submit" disabled={busy}>
-          {busy ? "Thinking..." : "Ask the agent"}
-        </button>
+        <LoadingButton className="primary-button" type="submit" busy={busy} busyLabel="Thinking...">
+          Ask the agent
+        </LoadingButton>
       </form>
     </div>
   );

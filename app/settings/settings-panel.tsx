@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
+import { LoadingButton, Skeleton } from "../ui/feedback";
 import styles from "./settings-panel.module.css";
 
 const settingsResponseSchema = z.object({
@@ -47,9 +49,13 @@ function responseError(payload: unknown): string | null {
 }
 
 export function SettingsPanel() {
+  const router = useRouter();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busyAction, setBusyAction] = useState("");
+  const [successAction, setSuccessAction] = useState("");
   const [ruleId, setRuleId] = useState("");
   const [name, setName] = useState("");
   const [ingredientIds, setIngredientIds] = useState<string[]>([]);
@@ -58,6 +64,7 @@ export function SettingsPanel() {
   const [simulateDate, setSimulateDate] = useState("");
 
   async function loadSettings() {
+    setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/agent/settings");
@@ -68,6 +75,8 @@ export function SettingsPanel() {
       setSettings(parsed.data);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Agent settings could not be loaded.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -94,7 +103,10 @@ export function SettingsPanel() {
 
   async function saveRule(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
+    setBusyAction("save");
+    setSuccessAction("");
     setError("");
     try {
       const response = await fetch("/api/agent/settings", {
@@ -113,15 +125,20 @@ export function SettingsPanel() {
       if (!response.ok) throw new Error(responseError(payload) ?? "The standing rule could not be saved.");
       clearForm();
       await loadSettings();
+      setSuccessAction("save");
+      window.setTimeout(() => setSuccessAction(""), 900);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "The standing rule could not be saved.");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   async function toggleRule(rule: StandingRule) {
     setBusy(true);
+    setBusyAction(`toggle:${rule.id}`);
+    setSuccessAction("");
     setError("");
     try {
       const response = await fetch("/api/agent/settings", {
@@ -132,15 +149,20 @@ export function SettingsPanel() {
       const payload: unknown = await response.json();
       if (!response.ok) throw new Error(responseError(payload) ?? "The standing rule could not be updated.");
       await loadSettings();
+      setSuccessAction(`toggle:${rule.id}`);
+      window.setTimeout(() => setSuccessAction(""), 900);
     } catch (toggleError) {
       setError(toggleError instanceof Error ? toggleError.message : "The standing rule could not be updated.");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   async function simulateDay() {
     setBusy(true);
+    setBusyAction("simulate");
+    setSuccessAction("");
     setError("");
     try {
       const response = await fetch("/api/brief", {
@@ -150,16 +172,19 @@ export function SettingsPanel() {
       });
       const payload: unknown = await response.json();
       if (!response.ok) throw new Error(responseError(payload) ?? "The simulated brief could not be prepared.");
-      window.location.assign(`/?date=${encodeURIComponent(simulateDate)}`);
+      setSuccessAction("simulate");
+      window.dispatchEvent(new Event("brewlytics:navigation-start"));
+      window.setTimeout(() => router.push(`/?date=${encodeURIComponent(simulateDate)}`), 240);
     } catch (simulateError) {
       setError(simulateError instanceof Error ? simulateError.message : "The simulated brief could not be prepared.");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} aria-busy={busy || loading}>
       <section className={styles.card} aria-labelledby="session-title">
         <h2 id="session-title">Workspace access</h2>
         <p>You are signed in with a secure session. Sign out from the navigation when you are finished.</p>
@@ -171,6 +196,10 @@ export function SettingsPanel() {
           A rule can automatically record approval for a saved draft only when every ingredient,
           the supplier, and the total are within its limits. Brewlytics never sends an order or contacts a supplier.
         </p>
+        {loading && !settings && <div className="loading-cards" role="status" aria-live="polite">
+          <span className="sr-only">Loading agent settings...</span>
+          {Array.from({ length: 2 }, (_, index) => <Skeleton className="skeleton-row" key={index} />)}
+        </div>}
         {settings?.rules.map((rule) => (
           <article className={styles.rule} key={rule.id}>
             <div>
@@ -184,13 +213,21 @@ export function SettingsPanel() {
             </div>
             <div className={styles.ruleActions}>
               <button type="button" disabled={busy} onClick={() => beginEdit(rule)}>Edit</button>
-              <button type="button" disabled={busy} onClick={() => void toggleRule(rule)}>
+              <LoadingButton
+                type="button"
+                busy={busyAction === `toggle:${rule.id}`}
+                busyLabel="Updating..."
+                success={successAction === `toggle:${rule.id}`}
+                successLabel="Updated"
+                disabled={busy && busyAction !== `toggle:${rule.id}`}
+                onClick={() => void toggleRule(rule)}
+              >
                 {rule.enabled ? "Pause" : "Enable"}
-              </button>
+              </LoadingButton>
             </div>
           </article>
         ))}
-        {settings && settings.rules.length === 0 && <p>No standing rules are configured.</p>}
+        {settings && settings.rules.length === 0 && <div className="empty-state"><p>Nothing here yet. Add a rule when you&apos;re ready.</p></div>}
 
         <form className={styles.form} onSubmit={saveRule}>
           <h3>{ruleId ? "Edit rule" : "Add a rule"}</h3>
@@ -232,9 +269,16 @@ export function SettingsPanel() {
             />
           </label>
           <div className={styles.ruleActions}>
-            <button type="submit" disabled={busy || !settings}>
-              {busy ? "Saving..." : ruleId ? "Save rule" : "Add rule"}
-            </button>
+            <LoadingButton
+              type="submit"
+              busy={busyAction === "save"}
+              busyLabel="Saving..."
+              success={successAction === "save"}
+              successLabel="Saved"
+              disabled={!settings || (busy && busyAction !== "save")}
+            >
+              {ruleId ? "Save rule" : "Add rule"}
+            </LoadingButton>
             {ruleId && <button type="button" disabled={busy} onClick={clearForm}>Cancel edit</button>}
           </div>
         </form>
@@ -247,9 +291,18 @@ export function SettingsPanel() {
           Brief date
           <input type="date" required value={simulateDate} onChange={(event) => setSimulateDate(event.target.value)} />
         </label>
-        <button className="primary-button" type="button" disabled={busy || !simulateDate} onClick={() => void simulateDay()}>
-          {busy ? "Preparing..." : "Simulate a new day"}
-        </button>
+        <LoadingButton
+          className="primary-button"
+          type="button"
+          busy={busyAction === "simulate"}
+          busyLabel="Preparing..."
+          success={successAction === "simulate"}
+          successLabel="Ready"
+          disabled={busy && busyAction !== "simulate" || !simulateDate}
+          onClick={() => void simulateDay()}
+        >
+          Simulate a new day
+        </LoadingButton>
       </section>
 
       {error && <p className="form-message error" role="alert">{error}</p>}

@@ -13,9 +13,25 @@
   display: grid;
   gap: 12px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: var(--surface);
-  padding: 18px;
+  box-shadow: var(--shadow-soft);
+  padding: 20px;
+}
+
+.list > .card {
+  animation: activity-card-enter 280ms var(--ease-soft) both;
+}
+
+.list > .card:nth-child(2) { animation-delay: 50ms; }
+.list > .card:nth-child(3) { animation-delay: 100ms; }
+.list > .card:nth-child(4) { animation-delay: 150ms; }
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
 }
 
 .card header {
@@ -48,12 +64,12 @@
 .blocked,
 .error {
   background: var(--rust-pale);
-  color: var(--rust);
+  color: var(--rust-deep);
 }
 
 .started {
-  background: #f3ead1;
-  color: #806529;
+  background: var(--coffee-light);
+  color: var(--coffee);
 }
 
 .input {
@@ -65,8 +81,8 @@
 
 .input div {
   min-width: 0;
-  border-radius: 8px;
-  background: var(--paper);
+  border-radius: var(--radius-control);
+  background: rgb(243 232 216 / 60%);
   padding: 8px 10px;
 }
 
@@ -80,4 +96,19 @@
   margin: 2px 0 0;
   overflow-wrap: anywhere;
   font-size: 13px;
+}
+
+@keyframes activity-card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list > .card {
+    animation: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
 }

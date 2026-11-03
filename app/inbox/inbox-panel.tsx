@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
 import type { AgentActivity } from "@/lib/agent/activity-log";
+import { LoadingButton, Skeleton } from "../ui/feedback";
 import styles from "./inbox-panel.module.css";
 
 type ApiResult = {
@@ -38,7 +39,10 @@ export function InboxPanel() {
   const [details, setDetails] = useState<Record<string, Record<string, string>>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
+  const [busyAction, setBusyAction] = useState("");
+  const [collapsingId, setCollapsingId] = useState("");
+  const [successAction, setSuccessAction] = useState("");
 
   async function send(payload: Record<string, unknown>): Promise<ApiResult> {
     const response = await fetch("/api/agent/approvals", {
@@ -62,6 +66,7 @@ export function InboxPanel() {
 
   async function loadInbox() {
     setBusy(true);
+    setBusyAction("load");
     setError("");
     try {
       const result = await send({ operation: "list" });
@@ -71,6 +76,7 @@ export function InboxPanel() {
       setError(requestError instanceof Error ? requestError.message : "The inbox could not be loaded.");
     } finally {
       setBusy(false);
+      setBusyAction("");
     }
   }
 
@@ -80,6 +86,8 @@ export function InboxPanel() {
 
   async function saveEdit(item: ApprovalItem) {
     setBusy(true);
+    setBusyAction(`save:${item.id}`);
+    setSuccessAction("");
     setError("");
     try {
       const updatedDetails = parseDetails(item, details[item.id] ?? {});
@@ -89,6 +97,11 @@ export function InboxPanel() {
         summary: summaries[item.id] ?? item.summary,
         details: updatedDetails,
       });
+      setSuccessAction(`save:${item.id}`);
+      await new Promise((resolve) => window.setTimeout(
+        resolve,
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 240,
+      ));
       setItems((current) => current.map((entry) => entry.id === item.id
         ? { ...entry, summary: summaries[item.id] ?? entry.summary, details: updatedDetails }
         : entry));
@@ -97,11 +110,14 @@ export function InboxPanel() {
       setError(requestError instanceof Error ? requestError.message : "The approval item could not be edited.");
     } finally {
       setBusy(false);
+      setBusyAction("");
+      setSuccessAction("");
     }
   }
 
   async function decide(item: ApprovalItem, decision: "approved" | "rejected") {
     setBusy(true);
+    setBusyAction(`${decision}:${item.id}`);
     setError("");
     try {
       await send({
@@ -110,6 +126,11 @@ export function InboxPanel() {
         decision,
         reviewerNote: notes[item.id] ?? "",
       });
+      setCollapsingId(item.id);
+      await new Promise((resolve) => window.setTimeout(
+        resolve,
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 240,
+      ));
       setItems((current) => current.map((entry) => entry.id === item.id
         ? {
           ...entry,
@@ -118,10 +139,13 @@ export function InboxPanel() {
           reviewerNote: notes[item.id] ?? "",
         }
         : entry));
+      setCollapsingId("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "The decision could not be saved.");
     } finally {
+      setCollapsingId("");
       setBusy(false);
+      setBusyAction("");
     }
   }
 
@@ -129,14 +153,19 @@ export function InboxPanel() {
   const reviewed = items.filter((item) => item.status !== "pending_approval");
 
   return (
-    <div className={styles.panel}>
-      <button className="primary-button" type="button" disabled={busy} onClick={() => void loadInbox()}>
-        {busy ? "Loading..." : "Refresh inbox"}
-      </button>
+    <div className={styles.panel} aria-busy={busy}>
+      <LoadingButton className="primary-button" type="button" busy={busyAction === "load"} busyLabel="Loading..." disabled={busy && busyAction !== "load"} onClick={() => void loadInbox()}>
+        Refresh inbox
+      </LoadingButton>
       {error && <p className="form-message error" role="alert">{error}</p>}
 
       <h2>Items needing attention <span>{flags.length}</span></h2>
-      {flags.length === 0 ? (
+      {busy && flags.length === 0 ? (
+        <div className={styles.list} role="status" aria-live="polite">
+          <span className="sr-only">Loading items needing attention...</span>
+          {Array.from({ length: 2 }, (_, index) => <Skeleton className="skeleton-row" key={index} />)}
+        </div>
+      ) : flags.length === 0 ? (
         <div className="empty-state"><p>No blocked or failed agent actions to review.</p></div>
       ) : (
         <div className={styles.list}>
@@ -154,11 +183,16 @@ export function InboxPanel() {
       )}
 
       <h2>Pending approval <span>{pending.length}</span></h2>
-      {pending.length === 0 ? (
+      {busy && items.length === 0 ? (
+        <div className={styles.list} role="status" aria-live="polite">
+          <span className="sr-only">Loading pending approvals...</span>
+          {Array.from({ length: 2 }, (_, index) => <Skeleton className="skeleton-row" key={index} />)}
+        </div>
+      ) : pending.length === 0 ? (
         <div className="empty-state"><p>No pending approvals.</p></div>
       ) : (
         <div className={styles.list}>
-          {pending.map((item) => <article className={styles.card} key={item.id}>
+          {pending.map((item) => <article className={`${styles.card}${collapsingId === item.id ? ` ${styles.cardCollapsing}` : ""}`} key={item.id}>
             <header>
               <div>
                 <p className="eyebrow">{item.action.replaceAll("_", " ")}</p>
@@ -206,7 +240,17 @@ export function InboxPanel() {
                   </label>
                 ))}
                 <div className={styles.actions}>
-                  <button type="button" disabled={busy} onClick={() => saveEdit(item)}>Save edits</button>
+                  <LoadingButton
+                    type="button"
+                    busy={busyAction === `save:${item.id}`}
+                    busyLabel="Saving edits..."
+                    success={successAction === `save:${item.id}`}
+                    successLabel="Saved"
+                    disabled={busy && busyAction !== `save:${item.id}`}
+                    onClick={() => void saveEdit(item)}
+                  >
+                    Save edits
+                  </LoadingButton>
                   <button type="button" disabled={busy} onClick={() => setEditingId("")}>Cancel</button>
                 </div>
               </div>
@@ -226,8 +270,29 @@ export function InboxPanel() {
                   />
                 </label>
                 <div className={styles.actions}>
-                  <button type="button" disabled={busy} onClick={() => decide(item, "approved")}>Approve</button>
-                  <button type="button" disabled={busy} onClick={() => decide(item, "rejected")}>Reject</button>
+                  <LoadingButton
+                    type="button"
+                    busy={busyAction === `approved:${item.id}`}
+                    busyLabel="Approving..."
+                    success={collapsingId === item.id && busyAction === `approved:${item.id}`}
+                    successLabel="Approved"
+                    disabled={busy && busyAction !== `approved:${item.id}`}
+                    onClick={() => void decide(item, "approved")}
+                  >
+                    Approve
+                  </LoadingButton>
+                  <LoadingButton
+                    type="button"
+                    className="reject-button"
+                    busy={busyAction === `rejected:${item.id}`}
+                    busyLabel="Rejecting..."
+                    success={collapsingId === item.id && busyAction === `rejected:${item.id}`}
+                    successLabel="Rejected"
+                    disabled={busy && busyAction !== `rejected:${item.id}`}
+                    onClick={() => void decide(item, "rejected")}
+                  >
+                    Reject
+                  </LoadingButton>
                   <button type="button" disabled={busy} onClick={() => setEditingId(item.id)}>Edit</button>
                 </div>
               </>

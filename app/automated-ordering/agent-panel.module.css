@@ -8,9 +8,11 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  border-top: 2px solid var(--green);
+  border: 1px solid rgb(89 57 39 / 9%);
+  border-radius: var(--radius-card);
   background: var(--surface);
-  padding: 20px;
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
 }
 
 .form label {
@@ -26,8 +28,8 @@
   width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 2px;
-  background: white;
+  border-radius: var(--radius-control);
+  background: var(--cream);
   color: var(--ink);
   font: inherit;
   font-weight: 400;
@@ -36,8 +38,9 @@
 
 .form input:focus-visible,
 .form textarea:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--coffee);
   outline-offset: 1px;
+  box-shadow: var(--focus-glow);
 }
 
 .checkbox {
@@ -70,23 +73,34 @@
 
 .error {
   margin: 0;
-  border-left: 3px solid var(--rust);
+  border: 1px solid rgb(173 94 59 / 14%);
+  border-radius: var(--radius-control);
   background: var(--rust-pale);
-  color: #713b2b;
+  color: var(--rust-deep);
   padding: 12px 14px;
 }
 
 .answer,
 .draft {
-  border-top: 2px solid var(--green);
+  border: 1px solid rgb(89 57 39 / 9%);
+  border-radius: var(--radius-card);
   background: var(--surface);
-  padding: 20px;
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .answer:hover,
+  .draft:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
 }
 
 .answer h2,
 .draft h2 {
   margin: 0 0 8px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 400;
 }
@@ -113,7 +127,7 @@
 }
 
 .status {
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   background: var(--green-pale);
   color: var(--green);
   font-size: 12px;
@@ -123,9 +137,10 @@
 }
 
 .flags {
-  border-left: 3px solid var(--rust);
+  border: 1px solid rgb(173 94 59 / 14%);
+  border-radius: var(--radius-control);
   background: var(--rust-pale);
-  color: #713b2b;
+  color: var(--rust-deep);
   padding: 12px 16px;
 }
 
@@ -171,6 +186,9 @@
 }
 
 .sourceDetails summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   cursor: pointer;
   font-weight: 700;
 }
@@ -191,8 +209,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 20px;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
+  padding-top: 4px;
 }
 
 .approval p {
@@ -202,15 +219,23 @@
 
 .approved {
   margin-top: 20px !important;
-  border-top: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--green-pale);
   color: var(--green);
-  padding-top: 16px;
+  padding: 12px 16px;
   font-weight: 700;
 }
 
 @media (max-width: 600px) {
   .form {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .answer:hover,
+    .draft:hover {
+      transform: none;
+    }
   }
 
   .fullWidth {

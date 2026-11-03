@@ -21,6 +21,34 @@ Return a concise structured morning brief. Include at most three items, ranked b
 
 const BRIEF_SELECT = "brief_date,greeting,status_line,items,all_clear,details";
 
+function briefErrorDetails(error: unknown): string {
+  if (!(error instanceof Error)) return "Unknown error";
+  const providerError = error as Error & {
+    statusCode?: unknown;
+    isRetryable?: unknown;
+    url?: unknown;
+  };
+  const message = error.message
+    .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[redacted]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/(api[_-]?key|authorization)(\s*[:=]\s*)[^\s,;]+/gi, "$1$2[redacted]");
+  return JSON.stringify({
+    name: error.name,
+    message: message.slice(0, 1200),
+    statusCode: typeof providerError.statusCode === "number" ? providerError.statusCode : undefined,
+    retryable: typeof providerError.isRetryable === "boolean" ? providerError.isRetryable : undefined,
+    provider: typeof providerError.url === "string"
+      ? (() => {
+        try {
+          return new URL(providerError.url).hostname;
+        } catch {
+          return undefined;
+        }
+      })()
+      : undefined,
+  });
+}
+
 export function cafeLocalDate(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Australia/Sydney",
@@ -133,7 +161,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     if (error instanceof Error && error.message === "The Gemini API key is not configured on the server.") {
       throw error;
     }
-    console.error("Could not generate today's brief:", error instanceof Error ? error.name : "Unknown error");
+    console.error("Could not generate today's brief:", briefErrorDetails(error));
     throw new Error("Today's brief could not be generated. Check the café data and try again.");
   }
 

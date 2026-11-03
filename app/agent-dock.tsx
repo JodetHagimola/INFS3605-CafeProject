@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { z } from "zod";
 import { agentMessageSchema, type AgentMessage, type AgentMessagePart } from "@/lib/agent/chat-schema";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
+import { LoadingButton, Skeleton } from "./ui/feedback";
 import styles from "./agent-dock.module.css";
 
 type Thread = { id: string; title: string };
@@ -51,6 +53,7 @@ export function AgentDock() {
   const [tool, setTool] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [sending, setSending] = useState(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
   const loaded = useRef(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
@@ -84,10 +87,13 @@ export function AgentDock() {
   }, [open]);
 
   useEffect(() => {
-    messagesEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    messagesEnd.current?.scrollIntoView({ behavior, block: "end" });
   }, [messages, open]);
 
   async function newConversation() {
+    if (creatingConversation || sending) return;
+    setCreatingConversation(true);
     setError("");
     try {
       const response = await fetch("/api/agent/chat", {
@@ -103,13 +109,15 @@ export function AgentDock() {
       setMessages([]);
     } catch (newError) {
       setError(newError instanceof Error ? newError.message : "A new conversation could not be started.");
+    } finally {
+      setCreatingConversation(false);
     }
   }
 
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = input.trim();
-    if (!text || !thread || sending) return;
+    if (!text || !thread || sending || creatingConversation) return;
 
     setSending(true);
     setTool("");
@@ -199,7 +207,7 @@ export function AgentDock() {
   }
 
   async function decide(item: ApprovalItem, decision: "approved" | "rejected") {
-    setActionBusy(item.id);
+    setActionBusy(`${item.id}:${decision}`);
     setError("");
     try {
       const response = await fetch("/api/agent/approvals", {
@@ -251,9 +259,13 @@ export function AgentDock() {
           <p>{part.item.action.replaceAll("_", " ")}</p>
           {part.item.status === "pending_approval" ? (
             <div className={styles.cardActions}>
-              <button type="button" disabled={actionBusy === part.item.id} onClick={() => void decide(part.item, "approved")}>Approve</button>
-              <button type="button" disabled={actionBusy === part.item.id} onClick={() => void decide(part.item, "rejected")}>Reject</button>
-              <a href="/?review=1">Edit</a>
+                <LoadingButton type="button" busy={actionBusy === `${part.item.id}:approved`} disabled={actionBusy.startsWith(`${part.item.id}:`) && actionBusy !== `${part.item.id}:approved`} busyLabel="Approving..." onClick={() => void decide(part.item, "approved")}>
+                  Approve
+                </LoadingButton>
+                <LoadingButton type="button" className={styles.reject} busy={actionBusy === `${part.item.id}:rejected`} disabled={actionBusy.startsWith(`${part.item.id}:`) && actionBusy !== `${part.item.id}:rejected`} busyLabel="Rejecting..." onClick={() => void decide(part.item, "rejected")}>
+                  Reject
+                </LoadingButton>
+              <Link href="/?review=1">Edit</Link>
             </div>
           ) : <p className={styles.cardStatus}>Decision recorded: {part.item.status}.</p>}
         </section>
@@ -300,21 +312,32 @@ export function AgentDock() {
 
   return (
     <>
-      {open && (
-        <section className={styles.panel} aria-label="Brewlytics agent chat">
+      <section
+        id="agent-chat-panel"
+        className={`${styles.panel}${open ? ` ${styles.panelOpen}` : ""}`}
+        aria-label="Brewlytics agent chat"
+        aria-hidden={!open}
+        inert={!open}
+      >
           <header className={styles.header}>
             <div>
               <p className={styles.brand}>BREWLYTICS</p>
               <h2>Ask your agent</h2>
             </div>
             <div className={styles.headerActions}>
-              <button type="button" onClick={() => void newConversation()} disabled={sending}>New conversation</button>
+              <LoadingButton type="button" busy={creatingConversation} busyLabel="Starting..." disabled={sending} onClick={() => void newConversation()}>
+                New conversation
+              </LoadingButton>
               <button type="button" className={styles.close} aria-label="Collapse chat" onClick={() => setOpen(false)}>×</button>
             </div>
           </header>
-          <div className={styles.messages} aria-live="polite">
+          <div className={styles.messages} aria-live="polite" aria-busy={sending || loadingHistory}>
             {loadingHistory
-              ? <p className={styles.muted}>Loading your conversation...</p>
+              ? <div className={styles.historyLoading} role="status">
+                <span className="sr-only">Loading your conversation...</span>
+                <Skeleton className="skeleton-row" />
+                <Skeleton className="skeleton-row" />
+              </div>
               : messages.length === 0
                 ? <p className={styles.muted}>Ask about stock, recipes, deliveries, or what to prepare next.</p>
                 : messages.map((message) => (
@@ -323,7 +346,10 @@ export function AgentDock() {
                     {message.parts.map((part, index) => renderPart(message, part, index))}
                   </article>
                 ))}
-            {sending && tool && <p className={styles.working} role="status">{tool}...</p>}
+            {sending && <p className={`inline-status ${styles.working}`} role="status" aria-live="polite">
+              <span className="typing-dots" aria-hidden="true"><span /><span /><span /></span>
+              {tool ? `${tool}...` : "Thinking through your request..."}
+            </p>}
             <div ref={messagesEnd} />
           </div>
           {error && <p className={styles.error} role="alert">{error}</p>}
@@ -336,19 +362,19 @@ export function AgentDock() {
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder="What should I know?"
-              disabled={sending || loadingHistory || !thread}
+              disabled={sending || creatingConversation || loadingHistory || !thread}
             />
-            <button type="submit" className="primary-button" disabled={sending || loadingHistory || !thread || !input.trim()}>
-              {sending ? "Working..." : "Send"}
-            </button>
+            <LoadingButton className="primary-button" type="submit" busy={sending} busyLabel="Working..." disabled={creatingConversation || loadingHistory || !thread || !input.trim()}>
+              Send
+            </LoadingButton>
           </form>
-        </section>
-      )}
+      </section>
       {!open && (
         <button
           type="button"
           className={styles.launcher}
           aria-expanded={open}
+          aria-controls="agent-chat-panel"
           aria-label="Open Brewlytics chat"
           onClick={() => setOpen(true)}
         >
