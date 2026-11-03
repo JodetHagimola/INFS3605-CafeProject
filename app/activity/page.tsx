@@ -11,7 +11,7 @@ export default function ActivityPage() {
       <section className="orders-section" aria-labelledby="activity-title">
         <p className="eyebrow">AUDIT TRAIL</p>
         <h1 id="activity-title">Agent activity</h1>
-        <p className="section-description">See which tools ran, what they returned, and why.</p>
+        <p className="section-description">Review agent actions and decisions, including approvals recorded by you or a standing rule.</p>
         <ActivityPanel />
       </section>
     </main>

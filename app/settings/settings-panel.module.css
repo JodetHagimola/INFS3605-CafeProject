@@ -20,36 +20,82 @@
   margin: 0;
 }
 
-.card form {
-  display: grid;
-  justify-items: start;
-  gap: 12px;
+.card h3 {
+  margin: 0;
+  font-size: 1rem;
 }
 
-.card label {
+.form,
+.rule {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.field {
   display: grid;
   gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
 }
 
-.card input {
-  width: min(100%, 380px);
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--paper);
-  color: var(--ink);
-  padding: 10px 12px;
-  font: inherit;
+  background: var(--surface);
+  padding: 8px 10px;
+  color: inherit;
 }
 
-.note {
-  color: var(--muted);
-  font-size: 13px;
+.ingredients {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
 }
 
-.success {
-  color: var(--green);
-  font-weight: 700;
+.ingredients label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rule {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.rule p {
+  margin-top: 5px;
+}
+
+.ruleActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ruleActions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px 12px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ruleActions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .rule {
+    grid-template-columns: 1fr;
+  }
 }

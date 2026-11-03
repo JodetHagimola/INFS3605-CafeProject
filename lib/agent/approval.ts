@@ -66,20 +66,14 @@ export async function decideApproval(input: {
   status: "approved" | "rejected";
   reviewerNote: string;
 }): Promise<"updated" | "not-pending"> {
-  const { data, error } = await inventoryClient()
-    .from("approval_inbox")
-    .update({
-      status: input.status,
-      reviewer_note: input.reviewerNote,
-      reviewed_at: new Date().toISOString(),
-    })
-    .eq("id", input.id)
-    .eq("status", "pending_approval")
-    .select("id")
-    .maybeSingle();
+  const { data, error } = await inventoryClient().rpc("record_human_approval_decision", {
+    p_approval_id: input.id,
+    p_decision: input.status,
+    p_reviewer_note: input.reviewerNote,
+  });
   if (error) {
     console.error("Could not decide an approval inbox item:", error.message);
     throw new Error("The approval decision could not be saved.");
   }
-  return data ? "updated" : "not-pending";
+  return data === true ? "updated" : "not-pending";
 }

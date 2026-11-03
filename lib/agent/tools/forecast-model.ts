@@ -22,7 +22,7 @@ export type DemandForecast = {
 export type AgentForecastProposal = {
   startDate: string;
   endDate?: string;
-  isPublicHoliday?: boolean;
+  isPublicHoliday?: boolean | null;
   dailyForecasts: Array<{
     date: string;
     products: Record<string, { low: number; expected: number; high: number }>;

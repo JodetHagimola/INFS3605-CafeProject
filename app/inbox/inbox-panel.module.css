@@ -4,14 +4,6 @@
   margin-top: 28px;
 }
 
-.passcodeForm {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.passcodeForm label,
 .editForm label,
 .noteInput {
   display: grid;
@@ -21,7 +13,6 @@
   font-weight: 700;
 }
 
-.passcodeForm input,
 .editForm input,
 .editForm select,
 .noteInput input {
@@ -32,12 +23,6 @@
   color: var(--ink);
   padding: 10px 12px;
   font: inherit;
-}
-
-.note {
-  margin: -12px 0 0;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 .panel h2 {

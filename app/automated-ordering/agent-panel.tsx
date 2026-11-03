@@ -36,7 +36,6 @@ async function readAgentResponse(response: Response): Promise<z.infer<typeof age
 }
 
 export function AgentPanel({ initialDraft }: AgentPanelProps) {
-  const [passcode, setPasscode] = useState("");
   const [requestText, setRequestText] = useState("Check what ingredients need replenishing.");
   const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [isPublicHoliday, setIsPublicHoliday] = useState(false);
@@ -55,7 +54,7 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ passcode, request: requestText, forecastDate, isPublicHoliday }),
+        body: JSON.stringify({ request: requestText, forecastDate, isPublicHoliday }),
       });
       const result = await readAgentResponse(response);
       if (!response.ok || "error" in result) {
@@ -75,17 +74,6 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
   return (
     <div className={styles.panel}>
       <form className={styles.form} onSubmit={runAgent}>
-        <label>
-          Agent passcode
-          <input
-            type="password"
-            autoComplete="current-password"
-            maxLength={128}
-            required
-            value={passcode}
-            onChange={(event) => setPasscode(event.target.value)}
-          />
-        </label>
         <label>
           Forecast date
           <input
@@ -120,8 +108,8 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
 
       <p className={styles.note}>
         The agent reads café data and can save a draft, but cannot place or send
-        an order. The passcode is checked on the server and is not saved; AI and
-        Supabase secret keys stay on the server. Select the
+        an order. Your signed-in session protects this request; AI and Supabase
+        secret keys stay on the server. Select the
         holiday box only when you have checked the café&apos;s holiday calendar.
       </p>
 
@@ -214,9 +202,9 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
           ? <div className={styles.approval}>
             <p>
               Review quantities, suppliers, alternatives, and flags. Any request
-              to place or send an order must be created and decided in the Inbox.
+              to place or send an order must be created for owner review.
             </p>
-            <a className="primary-button" href="/inbox">Open approval inbox</a>
+            <a className="primary-button" href="/?review=1">Review approval items</a>
           </div>
           : <p className={styles.approved}>You approved this draft. No supplier was contacted.</p>}
       </section>}

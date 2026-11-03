@@ -11,7 +11,7 @@ export default function SettingsPage() {
       <section className="orders-section" aria-labelledby="settings-title">
         <p className="eyebrow">WORKSPACE</p>
         <h1 id="settings-title">Settings</h1>
-        <p className="section-description">Verify the shared agent passcode and review approval boundaries.</p>
+        <p className="section-description">Manage approval boundaries and prepare a simulated day for a demo.</p>
         <SettingsPanel />
       </section>
     </main>

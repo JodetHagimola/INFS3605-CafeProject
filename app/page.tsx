@@ -1,88 +1,151 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { AgentPanel } from "./automated-ordering/agent-panel";
+import { cafeLocalDate, getDailyBrief } from "@/lib/agent/daily-brief";
+import { BriefItemActions, RefreshBriefButton } from "./brief-actions";
+import { InboxPanel } from "./inbox/inbox-panel";
 import { SiteNav } from "./site-nav";
 import styles from "./today.module.css";
-import { getTodayBrief } from "@/lib/agent/today";
 
 export const metadata: Metadata = {
   title: "Today | Brewlytics",
   description: "Your café's inventory, deliveries, and agent check for today.",
 };
 
-export default async function TodayPage() {
+function validDate(value: string | undefined): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return parsed.toISOString().slice(0, 10) === value ? value : null;
+}
+
+export default async function TodayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string | string[]; review?: string | string[] }>;
+}) {
   await connection();
-  const brief = await getTodayBrief();
-  const attentionCount = brief.lowStock.length
-    + brief.deliveries.filter((delivery) => delivery.flag !== null).length
-    + (brief.draft?.flags.length ?? 0);
-  const today = new Date().toISOString().slice(0, 10);
-  const nextWeek = new Date(Date.parse(`${today}T00:00:00.000Z`) + 7 * 86_400_000)
-    .toISOString().slice(0, 10);
-  const deliveries = brief.deliveries.filter((delivery) =>
-    (delivery.status !== "complete" || delivery.flag !== null)
-    && (delivery.expectedDate <= nextWeek || delivery.status === "overdue"));
+  const query = await searchParams;
+  const date = typeof query.date === "string" ? query.date : undefined;
+  const activeDate = validDate(date) ?? cafeLocalDate();
+  let brief = null;
+  let error = "";
+  try {
+    brief = await getDailyBrief({ date });
+  } catch (briefError) {
+    error = briefError instanceof Error
+      ? briefError.message
+      : "Today's brief could not be prepared. Please try again later.";
+  }
 
   return (
     <main className="page-shell">
       <SiteNav current="today" />
-      <section className="orders-section" aria-labelledby="today-title">
+      <section className={styles.brief} aria-labelledby="today-title">
         <p className="eyebrow">DAILY BRIEF</p>
         <h1 id="today-title">Today</h1>
-        <p className="section-description">
-          A quick view of stock, deliveries, and the latest replenishment draft.
-          Run a check when you want the agent to review the latest data.
-        </p>
-
-        <div className={styles.summaryGrid}>
-          <section className={styles.summaryCard} aria-labelledby="stock-title">
-            <h2 id="stock-title">Stock needing attention</h2>
-            <p className={styles.summaryCount}>{brief.lowStock.length}</p>
-            {brief.inventoryError
-              ? <p className={styles.attention} role="alert">{brief.inventoryError}</p>
-              : brief.lowStock.length
-                ? <ul>{brief.lowStock.slice(0, 6).map((item) => (
-                  <li key={item.id}>
-                    <strong>{item.name}</strong>: {item.quantity === null ? "No quantity" : `${item.quantity} ${item.unit}`}
-                    {" — "}{item.status}
-                  </li>
-                ))}</ul>
-                : <p className={styles.muted}>No low-stock or missing-stock records.</p>}
-          </section>
-
-          <section className={styles.summaryCard} aria-labelledby="delivery-title">
-            <h2 id="delivery-title">Arriving deliveries</h2>
-            <p className={styles.summaryCount}>{deliveries.length}</p>
-            {brief.deliveryError
-              ? <p className={styles.attention} role="alert">{brief.deliveryError}</p>
-              : deliveries.length
-                ? <ul>{deliveries.slice(0, 6).map((delivery) => (
-                  <li key={delivery.deliveryId}>
-                    <strong>{delivery.ingredient}</strong>: {delivery.receivedQuantity} of {delivery.orderedQuantity} {delivery.unit ?? ""}
-                    {" · "}{delivery.status} · expected {delivery.expectedDate}
-                    {delivery.flag && <span className={styles.muted}> — {delivery.flag}</span>}
-                  </li>
-                ))}</ul>
-                : <p className={styles.muted}>No open deliveries are listed.</p>}
-          </section>
-
-          <section className={styles.summaryCard} aria-labelledby="attention-title">
-            <h2 id="attention-title">Items to review</h2>
-            <p className={styles.summaryCount}>{attentionCount}</p>
-            {brief.draftError && <p className={styles.attention} role="alert">{brief.draftError}</p>}
-            {brief.draft
-              ? <>
-                <p>Latest replenishment draft: <strong>{brief.draft.status}</strong> for {brief.draft.forecastDate}.</p>
-                {brief.draft.flags.length > 0 && <ul>
-                  {brief.draft.flags.slice(0, 5).map((flag) => <li key={flag}>{flag}</li>)}
-                </ul>}
-              </>
-              : !brief.draftError && <p className={styles.muted}>No replenishment draft has been saved yet.</p>}
-          </section>
+        <div className={styles.briefHeading}>
+          <div>
+            <p className={styles.date}>{new Intl.DateTimeFormat("en-AU", {
+              dateStyle: "full",
+              timeZone: "Australia/Sydney",
+            }).format(new Date(`${activeDate}T12:00:00.000Z`))}
+              {activeDate !== cafeLocalDate() && " · Simulated date"}</p>
+            <RefreshBriefButton date={activeDate} />
+          </div>
         </div>
-
-        <AgentPanel initialDraft={brief.draft} />
+        {error ? (
+          <section className={styles.emptyState} role="status">
+            <h2>I couldn't prepare today's brief.</h2>
+            <p>{error}</p>
+            <p>Try refreshing later; technical details are recorded on the server.</p>
+          </section>
+        ) : brief && (
+          <>
+            <section className={styles.intro}>
+              <p>{brief.greeting}</p>
+              <h2>{brief.statusLine}</h2>
+            </section>
+            {brief.items.length > 0 ? (
+              <div className={styles.items}>
+                {brief.items.map((item) => (
+                  <article className={styles.item} key={item.id}>
+                    <h2>{item.title}</h2>
+                    <p>{item.why}</p>
+                    <p className={styles.actionTaken}>{item.actionTaken}</p>
+                    <BriefItemActions item={item} date={brief.briefDate} />
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <section className={styles.emptyState}>
+                <h2>All clear</h2>
+                <p>{brief.allClear}</p>
+              </section>
+            )}
+            {brief.items.length > 0 && <p className={styles.allClear}>{brief.allClear}</p>}
+            <details className={styles.details}>
+              <summary>See details</summary>
+              <div className={styles.detailsContent}>
+                {brief.details.lowStock.length > 0 && <>
+                  <h3>Stock</h3>
+                  <ul>{brief.details.lowStock.map((item) => (
+                    <li key={item.ingredientId}>
+                      {item.ingredient}: {item.quantity === null ? "unknown quantity" : `${item.quantity} ${item.unit}`}
+                      {" · "}{item.status}
+                    </li>
+                  ))}</ul>
+                </>}
+                {brief.details.forecasts.length > 0 && <>
+                  <h3>Forecast</h3>
+                  <div className={styles.tableWrap}>
+                    <table>
+                      <thead><tr><th>Date</th><th>Product</th><th>Low</th><th>Expected</th><th>High</th></tr></thead>
+                      <tbody>{brief.details.forecasts.map((forecast, index) => (
+                        <tr key={`${forecast.date}-${forecast.product}-${index}`}>
+                          <td>{forecast.date}</td>
+                          <td>{forecast.product}</td>
+                          <td>{forecast.low}</td>
+                          <td>{forecast.expected}</td>
+                          <td>{forecast.high}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </>}
+                {brief.details.deliveries.length > 0 && <>
+                  <h3>Deliveries</h3>
+                  <ul>{brief.details.deliveries.map((delivery) => (
+                    <li key={delivery.deliveryId}>
+                      {delivery.ingredient}: {delivery.receivedQuantity} received of {delivery.orderedQuantity},
+                      {" expected "}{delivery.expectedDate} · {delivery.status}
+                      {delivery.flag && ` · ${delivery.flag}`}
+                    </li>
+                  ))}</ul>
+                </>}
+                {brief.details.supplierComparison.length > 0 && <>
+                  <h3>Supplier comparison</h3>
+                  <ul>{brief.details.supplierComparison.map((supplier, index) => (
+                    <li key={`${supplier.ingredient}-${supplier.supplier}-${index}`}>
+                      {supplier.ingredient}: {supplier.supplier}, {supplier.price}, {supplier.deliveryTime}
+                    </li>
+                  ))}</ul>
+                </>}
+                {brief.details.assumptions.length > 0 && <>
+                  <h3>Assumptions</h3>
+                  <ul>{brief.details.assumptions.map((value) => <li key={value}>{value}</li>)}</ul>
+                </>}
+                {brief.details.dataWarnings.length > 0 && <>
+                  <h3>Data notes</h3>
+                  <ul>{brief.details.dataWarnings.map((value) => <li key={value}>{value}</li>)}</ul>
+                </>}
+              </div>
+            </details>
+          </>
+        )}
       </section>
+      <details className={styles.details} open={query.review === "1"}>
+        <summary>Approvals and items needing attention</summary>
+        <InboxPanel />
+      </details>
     </main>
   );
 }

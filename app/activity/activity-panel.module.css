@@ -4,37 +4,6 @@
   margin-top: 28px;
 }
 
-.passcodeForm {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.passcodeForm label {
-  display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.passcodeForm input {
-  min-width: 220px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 10px 12px;
-  font: inherit;
-}
-
-.note {
-  margin: -12px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
 .list {
   display: grid;
   gap: 12px;

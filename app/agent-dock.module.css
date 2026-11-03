@@ -1,0 +1,251 @@
+.panel {
+  position: fixed;
+  z-index: 50;
+  right: 24px;
+  bottom: 86px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  width: min(440px, calc(100vw - 32px));
+  height: min(680px, calc(100dvh - 120px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: 0 20px 70px rgb(51 37 30 / 20%);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  padding: 14px 18px;
+}
+
+.brand,
+.speaker,
+.cardEyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 2px 0 0;
+  color: var(--coffee);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerActions button,
+.cardActions button,
+.cardActions a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.headerActions .close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.ownerMessage,
+.agentMessage {
+  max-width: 94%;
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+.ownerMessage {
+  align-self: end;
+  background: var(--green-pale);
+}
+
+.agentMessage {
+  align-self: start;
+  width: 100%;
+  background: var(--surface);
+}
+
+.speaker {
+  margin-bottom: 6px;
+  letter-spacing: 0.06em;
+}
+
+.messageText {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.inlineCard {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  padding: 12px;
+}
+
+.inlineCard h3,
+.inlineCard p {
+  margin: 0;
+}
+
+.inlineCard h3 {
+  font-size: 14px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cardActions button:first-child {
+  border-color: var(--coffee);
+  background: var(--coffee);
+  color: var(--cream);
+}
+
+.cardActions button:disabled,
+.headerActions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.cardStatus,
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tableWrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tableWrap th,
+.tableWrap td {
+  border-bottom: 1px solid var(--line);
+  padding: 6px;
+  text-align: left;
+}
+
+.working {
+  align-self: start;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.error {
+  margin: 0 14px 10px;
+  color: var(--rust);
+  font-size: 12px;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 9px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px;
+}
+
+.composer textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.launcher {
+  position: fixed;
+  z-index: 51;
+  right: 24px;
+  bottom: 20px;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--coffee);
+  color: var(--cream);
+  box-shadow: 0 6px 22px rgb(51 37 30 / 25%);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--cream);
+  border-radius: 50%;
+  background: var(--rust);
+}
+
+@media (max-width: 600px) {
+  .panel {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .launcher {
+    right: 18px;
+    bottom: 16px;
+  }
+}

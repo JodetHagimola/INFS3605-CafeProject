@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
 import type { AgentActivity } from "@/lib/agent/activity-log";
 import styles from "./inbox-panel.module.css";
@@ -31,7 +31,6 @@ function parseDetails(item: ApprovalItem, values: Record<string, string>) {
 }
 
 export function InboxPanel() {
-  const [passcode, setPasscode] = useState("");
   const [items, setItems] = useState<ApprovalItem[]>([]);
   const [flags, setFlags] = useState<AgentActivity[]>([]);
   const [editingId, setEditingId] = useState("");
@@ -45,7 +44,7 @@ export function InboxPanel() {
     const response = await fetch("/api/agent/approvals", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ passcode, ...payload }),
+      body: JSON.stringify(payload),
     });
     let result: unknown;
     try {
@@ -61,8 +60,7 @@ export function InboxPanel() {
     return parsed;
   }
 
-  async function loadInbox(event?: React.FormEvent<HTMLFormElement>) {
-    event?.preventDefault();
+  async function loadInbox() {
     setBusy(true);
     setError("");
     try {
@@ -75,6 +73,10 @@ export function InboxPanel() {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    void loadInbox();
+  }, []);
 
   async function saveEdit(item: ApprovalItem) {
     setBusy(true);
@@ -128,23 +130,9 @@ export function InboxPanel() {
 
   return (
     <div className={styles.panel}>
-      <form className={styles.passcodeForm} onSubmit={loadInbox}>
-        <label>
-          Agent passcode
-          <input
-            type="password"
-            autoComplete="current-password"
-            maxLength={128}
-            required
-            value={passcode}
-            onChange={(event) => setPasscode(event.target.value)}
-          />
-        </label>
-        <button className="primary-button" type="submit" disabled={busy}>
-          {busy ? "Loading..." : "Load inbox"}
-        </button>
-      </form>
-      <p className={styles.note}>The passcode is sent to the server for each request and is not stored here.</p>
+      <button className="primary-button" type="button" disabled={busy} onClick={() => void loadInbox()}>
+        {busy ? "Loading..." : "Refresh inbox"}
+      </button>
       {error && <p className="form-message error" role="alert">{error}</p>}
 
       <h2>Items needing attention <span>{flags.length}</span></h2>

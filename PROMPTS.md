@@ -76,3 +76,100 @@ List any tables you need that don't exist yet (e.g. sales_history, supplier_pric
   6. Standing rules (only if time allows)
 - Keep TypeScript strict, handle errors, and don't add dependencies without telling me.
 - Add a short README section explaining the agent, its tools and its boundaries.
+
+
+# Task: Rebuild Brewlytics as an agent-first, proactive app
+
+## Why this rebuild
+Our course feedback says: (1) hand more of the business process to the agent instead of keeping humans in the loop for everything, (2) design around a small business owner's day and add no friction, (3) show abstracted briefings, not busy dashboards, (4) have a clear design identity and story.
+
+The key test for agentic AI: if the human still has to notice the problem, start the AI, check the output and carry out the action, the AI is a tool and the human is still doing the process. Right now Brewlytics is a tool: the owner must enter a passcode on every page, pick a date, tick a holiday box and press "Run check". Fix that. The agent should start from an event (the owner opening the app on a new day, or a schedule), plan its own steps, act with tools, and bring the owner only the decisions that need a human.
+
+Final test for every design decision: after this is built, does the owner's day have fewer things in it, or more?
+
+## Context
+Brewlytics is a café inventory app: Next.js + TypeScript, Supabase, deployed on Vercel, developed in GitHub Codespaces. The agent is Gemini, called server-side via the Vercel AI SDK (`ai` and `@ai-sdk/google`) using GOOGLE_GENERATIVE_AI_API_KEY. Read the model ID from an env var `GEMINI_MODEL`, defaulting to `gemini-3.6-flash`, and return a clear error if the model ID is rejected. Do not hardcode the model anywhere else. `AGENT_PASSCODE` is the shared passcode. Never print, log, hardcode or commit secrets and do not edit .env.local.
+
+Existing pages: Today, Inbox, Chat, Activity, Settings. Existing agent route and tools already exist (inventory, recipes, forecast, shortfalls, drafts, activity log, approval inbox). Reuse what works. The forecast is now done by the Gemini agent from sales history (the old Random Forest/FastAPI model is gone), so remove any stale UI text about a "saved model".
+
+## Step 0: Inspect first, change nothing yet
+1. Read the repo: layout, pages, API routes, agent code, tools, Supabase usage, package.json.
+2. Diagnose why Today shows "The required delivery_receipts data could not be read" (missing table, wrong name, permissions/RLS, or code bug) and propose a fix.
+3. Reply with a short plan (files to add/change/remove, SQL needed, risks) and wait for my approval.
+
+## 1. Authentication: enter the passcode once
+- Add POST /api/auth/login that checks the passcode against process.env.AGENT_PASSCODE on the server and sets an httpOnly, secure, sameSite cookie (signed token, expires after about 12 hours). Add logout.
+- Protect all /api/agent/*, brief, chat, inbox and activity routes with that cookie (middleware or a shared helper). Return 401 otherwise.
+- One simple lock screen when unauthenticated. Remove passcode fields from every other page. Never store the passcode in the browser. Add basic rate limiting on login attempts.
+
+## 2. The persistent agent chatbox (omnipresent)
+- Build a global `<AgentDock />` mounted in app/layout.tsx (inside the authenticated shell) so it persists across every page navigation without remounting or losing state.
+- UI: a floating launcher button bottom-right that expands into a chat panel (full-height drawer on mobile). It can be collapsed without losing the conversation. Show a small badge when the agent has something for the owner, but no pop-ups, sounds or auto-opening panels. Never interrupt.
+- Streaming responses (use the AI SDK's useChat or equivalent). Show which tool the agent is using in a subtle "working..." status line.
+- Persist the conversation in Supabase (`agent_threads`, `agent_messages`) so it survives refreshes and device changes. Load the last conversation on open and offer "New conversation".
+- The chat is context-aware: send the current route and any visible item ID with each message so "approve this" or "why?" works on whatever the owner is looking at.
+- The agent can respond with rich inline cards, not just text: approval cards (Approve / Edit / Reject buttons), a draft order summary, and a small stock table. Define a zod schema for these message parts and render them in the dock.
+- Conversational data entry replaces forms: the owner can type or speak (browser speech-to-text if easy) things like "20L of milk arrived", "we binned 2L of milk", "oat milk supplier is changing to X". The agent calls the right tool (record_delivery, log_wastage, etc.) and confirms in one line.
+- Remove the separate Chat page. The dock replaces it.
+
+## 3. Proactive daily brief (the heart of the app)
+Trigger: when the owner opens the app on a new day (first authenticated load after the café's local midnight, Australia/Sydney time), or when generated by a schedule. If a brief for today exists in `daily_briefs`, show it instantly; otherwise generate it, showing a calm loading state, and cache it.
+
+Optional: add a Vercel Cron route (e.g. /api/cron/brief, protected by CRON_SECRET) that pre-generates the brief before opening time, so it is ready when the owner arrives. Note that cron schedules are in UTC.
+
+The brief is produced by a multi-step Gemini agent run (max about 10 steps) that decides for itself what to look at. Expected steps: gather inventory, incoming and overdue deliveries, recipes, sales history and supplier data; work out the date, day of week and whether it is a public holiday (use a `public_holidays` table for NSW, seeded by you, not a checkbox the owner has to tick); forecast demand for the next few days; compute shortfalls; compare suppliers; check for anomalies (stock not matching expected usage, delivery shorter than ordered, perishables at risk); then decide what to do about each finding using the action tiers below.
+
+Do all arithmetic (unit conversions, requirements, shortfalls, totals, cost comparisons) in TypeScript inside tools, never in the model's head. Give the model aggregates like `get_sales_summary`, not thousands of raw rows.
+
+Brief output (validate with zod, store in `daily_briefs`):
+- greeting + a one-line status, e.g. "Good morning. 3 things today. Everything else is on track."
+- `items`: at most 3, ranked by urgency, each with: id, title (plain-English, one sentence), why (one short sentence), the action the agent already took, and ONE primary action button plus at most one secondary (Approve / Edit / Confirm / Dismiss). Example: "Oat milk runs out by Thursday. Order the usual? [Approve] [Edit]".
+- `all_clear`: one sentence on everything that is fine.
+- `details`: the full data (low-stock list, forecast table, supplier comparison, assumptions, data warnings), hidden behind a "See details" expander. Never on the front screen.
+- If there is nothing needing the owner, say so and show no items. An empty brief is a good outcome.
+- Optional end-of-day wrap-up generated after closing time (configurable in Settings): a short summary of what happened and what the agent has queued for tomorrow.
+
+## 4. Autonomy tiers
+- Act silently: read-only analysis (inventory, forecasts, deliveries, supplier prices).
+- Act and tell: reversible low-risk actions. Saving draft orders, recording deliveries and wastage the owner reported, updating the brief. Mention them in one line ("I drafted tomorrow's milk order.").
+- Ask first (one tap): anything involving money or outside parties (placing or sending an order, contacting a supplier, switching supplier, price changes). The agent only creates an approval item. Only a human tap on Approve moves it forward. The app still never sends orders itself.
+- Standing rules (Settings): the owner can set rules like "auto-approve restocks of milk and beans under $200 from my usual supplier". Within a rule, the agent may record the approval itself and tell the owner. Outside it, it asks. Add a `standing_rules` table and a simple UI. Also have the agent learn the "usual order" from past approved orders and propose it as the default, so approvals are one tap.
+- The agent learns from edits: if the owner edits a draft, record the pattern in `agent_memory` and use it next time (and suggest it as a standing rule when it repeats).
+
+## 5. Boundaries (put in the system prompt AND enforce in code)
+- Never place or send an order, contact a supplier, or mark an order approved or sent without a human action or a matching standing rule.
+- Never delete or overwrite inventory, recipes, supplier prices or existing orders. Changes happen only through defined tools that record who/what made them.
+- Never invent numbers, suppliers or prices. If data is missing or stale, say so briefly.
+- Never recommend negative quantities. Stop and flag if the order is more than 2x the forecast requirement or the forecast cannot be produced.
+- Forecasts are AI estimates from the available sales history (currently synthetic), so always give a low/expected/high range and never present them as certain.
+- Keep technical errors off the front screen. If a data source fails (like delivery_receipts), the brief says it plainly in human terms ("I couldn't check deliveries today"), logs the technical detail in Activity, and carries on with what it has.
+- Don't surface data-quality caveats as brief items unless they change what the owner should do.
+
+## 6. Streamline the site (owner's day, no extra destinations)
+- Navigation: Today (the brief, default landing page), Activity (what the agent did and why, "detail on demand"), Settings (opening/closing times, standing rules, logout). Remove the standalone Inbox page: approvals live as action cards on Today and in the dock, with a small "history" list under Activity. Keep old routes redirecting so nothing breaks.
+- Remove the manual forecast date field, public holiday checkbox, prompt textbox and Run check button from Today. Keep a small "Refresh brief" link and, in Settings, a "Simulate a new day" button that regenerates the brief for a chosen date (so we can demo the proactive behaviour at the showcase).
+- Reduce visual density: no grids of tiles or stat boxes on the front screen. Max 3 action cards, generous spacing, a calm tone.
+- Keep the existing warm coffee-brown visual identity (serif headings, cream background) and polish it: consistent spacing, accessible contrast, good mobile layout. The experience should feel like a trusted assistant's morning note, not a dashboard.
+
+## 7. Supabase
+List the tables needed (e.g. daily_briefs, agent_threads, agent_messages, agent_memory, standing_rules, public_holidays, delivery_receipts if missing, plus existing ones) and give me the SQL to create them with sensible indexes, plus seed data that makes the demo brief interesting (a low-stock item, a short delivery, a public holiday this week, an overdue delivery). Don't run migrations without telling me. Use the same inventory table as the Inventory Tracking feature. Server routes use the service-role key only on the server.
+
+## 8. Acceptance tests (check these before telling me you're done)
+- Opening the app on a new day shows a brief automatically with no clicks and no passcode re-entry after the first login.
+- The brief shows 3 or fewer items, each with exactly one primary action.
+- The chat dock is visible on every page, keeps its conversation when navigating, and survives a refresh.
+- Typing "20L of milk arrived" in the dock updates inventory through the tool and confirms in one line.
+- Approving an item from the brief or the dock records the decision and logs it in Activity. Nothing is ever sent externally.
+- A failing data source never shows a raw error on Today.
+- No secret appears in client code, logs or the repo.
+
+## Working rules
+Work in phases and tell me what changed and how to test it after each:
+1. Plan + diagnose delivery_receipts (Step 0)
+2. Auth cookie + remove per-page passcodes
+3. Brief generation (agent loop, zod schema, daily_briefs cache) + new Today page
+4. Persistent AgentDock with streaming, persisted threads and inline action cards
+5. Approvals flow + standing rules + learning from edits
+6. Streamlined navigation, visual polish, cron pre-generation, wrap-up if time allows
+
+Keep TypeScript strict, handle errors, and don't add dependencies without telling me. Add a README section explaining the agent, its tools, tiers and boundaries.

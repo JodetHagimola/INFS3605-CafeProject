@@ -8,14 +8,14 @@ import { getRecipesTool } from "./get-recipes";
 import { createGetSalesSummaryTool } from "./get-sales-summary";
 import { createSaveDraftOrderTool } from "./save-draft-order";
 import type { DraftOrderRecord } from "@/lib/agent/draft-schema";
-import { requestHumanApprovalTool } from "./request-human-approval";
+import { createRequestHumanApprovalTool } from "./request-human-approval";
 import { logWastageTool } from "./log-wastage";
 import { recordDeliveryTool } from "./record-delivery";
 
 export function createAgentTools(defaults: {
   forecastDate: string;
-  isPublicHoliday: boolean;
-}) {
+  isPublicHoliday: boolean | null;
+}, options: { onApprovalCreated?: (approvalId: string, autoApproved: boolean) => void } = {}) {
   let forecast: DemandForecast | null = null;
   let draft: DraftOrderRecord | null = null;
   let salesSummaryRead = false;
@@ -35,7 +35,7 @@ export function createAgentTools(defaults: {
       save_draft_order: createSaveDraftOrderTool(() => forecast, (result) => {
         draft = result;
       }, () => draft !== null),
-      request_human_approval: requestHumanApprovalTool,
+      request_human_approval: createRequestHumanApprovalTool(options.onApprovalCreated),
       log_wastage: logWastageTool,
       record_delivery: recordDeliveryTool,
     },

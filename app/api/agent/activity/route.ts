@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { getAgentActivity } from "@/lib/agent/activity-log";
-import { checkAgentPasscode } from "@/lib/agent/auth";
+import { hasAgentSession } from "@/lib/agent/auth";
+import { getApprovalInbox } from "@/lib/agent/approval";
 
 export const runtime = "nodejs";
 
-const requestSchema = z.object({
-  passcode: z.string().min(1).max(128),
-}).strict();
-
 export async function POST(request: Request) {
+  if (!await hasAgentSession()) {
+    return NextResponse.json({ error: "Please sign in to view agent activity." }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -17,20 +17,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please submit a valid activity request." }, { status: 400 });
   }
 
-  const parsed = requestSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "A valid agent passcode is required." }, { status: 401 });
-  }
-  try {
-    if (!checkAgentPasscode(parsed.data.passcode)) {
-      return NextResponse.json({ error: "The passcode does not match." }, { status: 401 });
-    }
-  } catch {
-    return NextResponse.json({ error: "The agent passcode is not configured on the server." }, { status: 500 });
+  if (body !== null && (typeof body !== "object" || Array.isArray(body)
+    || Object.keys(body).length > 0)) {
+    return NextResponse.json({ error: "The activity request is invalid." }, { status: 400 });
   }
 
   try {
-    return NextResponse.json({ items: await getAgentActivity() });
+    const [items, approvals] = await Promise.all([getAgentActivity(), getApprovalInbox()]);
+    return NextResponse.json({ items, approvals });
   } catch {
     return NextResponse.json({ error: "Agent activity could not be loaded. Check the Supabase setup." }, { status: 500 });
   }

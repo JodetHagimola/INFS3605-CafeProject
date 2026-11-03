@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AgentActivity } from "@/lib/agent/activity-log";
+import type { ApprovalItem } from "@/lib/agent/approval-schema";
 import styles from "./activity-panel.module.css";
 
-type ActivityResponse = { items?: AgentActivity[]; error?: string };
+type ActivityResponse = { items?: AgentActivity[]; approvals?: ApprovalItem[]; error?: string };
 
 function inputFields(summary: string): Array<[string, string]> {
   try {
@@ -22,24 +23,24 @@ function inputFields(summary: string): Array<[string, string]> {
 }
 
 export function ActivityPanel() {
-  const [passcode, setPasscode] = useState("");
   const [items, setItems] = useState<AgentActivity[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function load(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function load() {
     setBusy(true);
     setError("");
     try {
       const response = await fetch("/api/agent/activity", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ passcode }),
+        body: JSON.stringify({}),
       });
       const result = await response.json() as ActivityResponse;
       if (!response.ok) throw new Error(result.error || "Activity could not be loaded.");
       setItems(result.items ?? []);
+      setApprovals(result.approvals ?? []);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Activity could not be loaded.");
     } finally {
@@ -47,28 +48,19 @@ export function ActivityPanel() {
     }
   }
 
+  useEffect(() => {
+    void load();
+  }, []);
+
   return (
     <div className={styles.panel}>
-      <form className={styles.passcodeForm} onSubmit={load}>
-        <label>
-          Agent passcode
-          <input
-            type="password"
-            autoComplete="current-password"
-            maxLength={128}
-            required
-            value={passcode}
-            onChange={(event) => setPasscode(event.target.value)}
-          />
-        </label>
-        <button className="primary-button" type="submit" disabled={busy}>
-          {busy ? "Loading..." : "Load activity"}
-        </button>
-      </form>
-      <p className={styles.note}>The passcode is checked on the server and is not stored here.</p>
+      <button className="primary-button" type="button" disabled={busy} onClick={() => void load()}>
+        {busy ? "Loading..." : "Refresh activity"}
+      </button>
       {error && <p className="form-message error" role="alert">{error}</p>}
+      {busy && items.length === 0 && <p role="status">Loading activity...</p>}
       {items.length === 0 ? (
-        <div className="empty-state"><p>No activity to show yet.</p></div>
+        !busy && <div className="empty-state"><p>No activity to show yet.</p></div>
       ) : (
         <div className={styles.list}>
           {items.map((item) => <article className={styles.card} key={item.id}>
@@ -88,6 +80,32 @@ export function ActivityPanel() {
           </article>)}
         </div>
       )}
+      <section aria-labelledby="approval-history-title">
+        <h2 id="approval-history-title">Approval history</h2>
+        {approvals.filter((item) => item.status !== "pending_approval").length === 0 ? (
+          <div className="empty-state"><p>No approval decisions have been recorded.</p></div>
+        ) : (
+          <div className={styles.list}>
+            {approvals.filter((item) => item.status !== "pending_approval").slice(0, 20).map((item) => (
+              <article className={styles.card} key={item.id}>
+                <header>
+                  <div>
+                    <p className="eyebrow">{item.action.replaceAll("_", " ")}</p>
+                    <h3>{item.summary}</h3>
+                    <time dateTime={item.reviewedAt ?? item.createdAt}>
+                      {new Date(item.reviewedAt ?? item.createdAt).toLocaleString()}
+                    </time>
+                  </div>
+                  <span className={`${styles.status} ${item.status === "rejected" ? styles.error : ""}`}>
+                    {item.status}
+                  </span>
+                </header>
+                {item.reviewerNote && <p>{item.reviewerNote}</p>}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

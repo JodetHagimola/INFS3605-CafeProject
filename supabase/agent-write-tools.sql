@@ -28,7 +28,7 @@ as $$
 declare
   v_quantity numeric;
 begin
-  if p_kind is null or p_kind <> 'waste' then
+  if p_kind is null or p_kind not in ('waste', 'delivery') then
     raise exception 'INVALID_AGENT_MOVEMENT';
   end if;
 

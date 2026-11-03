@@ -21,7 +21,7 @@ const forecastInput = z.object({
 
 export function createForecastDemandTool(defaults: {
   forecastDate: string;
-  isPublicHoliday: boolean;
+  isPublicHoliday: boolean | null;
 }, hasReadSalesSummary: () => boolean, onForecast: (forecast: DemandForecast) => void) {
   return tool({
     description: "After get_sales_summary, use its historical aggregates to produce Gemini's whole-number low/expected/high sales estimates, one entry per date and product, plus assumptions. This tool validates the estimates and blocks insufficient history.",

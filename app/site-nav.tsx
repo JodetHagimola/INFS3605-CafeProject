@@ -1,9 +1,9 @@
-type SitePage = "today" | "inbox" | "chat" | "activity" | "settings";
+import { LogoutButton } from "./logout-button";
+
+type SitePage = "today" | "activity" | "settings";
 
 const pages: Array<{ id: SitePage; label: string; href: string }> = [
   { id: "today", label: "Today", href: "/" },
-  { id: "inbox", label: "Inbox", href: "/inbox" },
-  { id: "chat", label: "Chat", href: "/chat" },
   { id: "activity", label: "Activity", href: "/activity" },
   { id: "settings", label: "Settings", href: "/settings" },
 ];
@@ -26,6 +26,7 @@ export function SiteNav({ current }: { current?: SitePage }) {
           </a>
         ))}
       </nav>
+      <LogoutButton />
     </header>
   );
 }

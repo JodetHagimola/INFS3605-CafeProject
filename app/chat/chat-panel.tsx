@@ -17,7 +17,6 @@ function responseError(value: unknown): string | null {
 }
 
 export function ChatPanel() {
-  const [passcode, setPasscode] = useState("");
   const [requestText, setRequestText] = useState("");
   const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [isPublicHoliday, setIsPublicHoliday] = useState(false);
@@ -34,7 +33,7 @@ export function ChatPanel() {
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ passcode, request, forecastDate, isPublicHoliday }),
+        body: JSON.stringify({ request, forecastDate, isPublicHoliday }),
       });
       let payload: unknown;
       try {
@@ -67,18 +66,7 @@ export function ChatPanel() {
 
   return (
     <div className={styles.chat}>
-      <form className={styles.credentials} onSubmit={(event) => event.preventDefault()}>
-        <label>
-          Agent passcode
-          <input
-            type="password"
-            autoComplete="current-password"
-            maxLength={128}
-            required
-            value={passcode}
-            onChange={(event) => setPasscode(event.target.value)}
-          />
-        </label>
+      <div className={styles.credentials}>
         <label>
           Forecast date
           <input
@@ -96,12 +84,7 @@ export function ChatPanel() {
           />
           Selected date is a public holiday
         </label>
-      </form>
-
-      <p className={styles.note}>
-        The passcode stays in this page&apos;s memory and is sent only to the server
-        with each request. Forecasts are indicative AI estimates and may use synthetic history.
-      </p>
+      </div>
 
       <div className={styles.messages} aria-live="polite">
         {messages.length === 0
@@ -152,7 +135,7 @@ export function ChatPanel() {
           onChange={(event) => setRequestText(event.target.value)}
           placeholder="What do I need for the long weekend?"
         />
-        <button className="primary-button" type="submit" disabled={busy || !passcode}>
+        <button className="primary-button" type="submit" disabled={busy}>
           {busy ? "Thinking..." : "Ask the agent"}
         </button>
       </form>

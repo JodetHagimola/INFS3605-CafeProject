@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { checkAgentPasscode } from "@/lib/agent/auth";
+import { hasAgentSession } from "@/lib/agent/auth";
 import { decideApproval, editApproval, getApprovalInbox } from "@/lib/agent/approval";
 import { getAgentActivity } from "@/lib/agent/activity-log";
 import { approvalDetailsSchema } from "@/lib/agent/approval-schema";
@@ -9,22 +9,15 @@ export const runtime = "nodejs";
 
 const requestSchema = z.discriminatedUnion("operation", [
   z.object({
-    passcode: z.string().min(1).max(128),
-    operation: z.literal("verify"),
-  }).strict(),
-  z.object({
-    passcode: z.string().min(1).max(128),
     operation: z.literal("list"),
   }).strict(),
   z.object({
-    passcode: z.string().min(1).max(128),
     operation: z.literal("edit"),
     id: z.string().uuid(),
     summary: z.string().trim().min(1).max(500),
     details: approvalDetailsSchema,
   }).strict(),
   z.object({
-    passcode: z.string().min(1).max(128),
     operation: z.literal("decide"),
     id: z.string().uuid(),
     decision: z.enum(["approved", "rejected"]),
@@ -33,25 +26,15 @@ const requestSchema = z.discriminatedUnion("operation", [
 ]);
 
 export async function POST(request: Request) {
+  if (!await hasAgentSession()) {
+    return NextResponse.json({ error: "Please sign in to manage approvals." }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Please submit a valid approval request." }, { status: 400 });
-  }
-
-  const suppliedPasscode = typeof body === "object" && body !== null && !Array.isArray(body)
-    ? (body as Record<string, unknown>).passcode
-    : undefined;
-  if (typeof suppliedPasscode !== "string" || !suppliedPasscode || suppliedPasscode.length > 128) {
-    return NextResponse.json({ error: "A valid agent passcode is required." }, { status: 401 });
-  }
-  try {
-    if (!checkAgentPasscode(suppliedPasscode)) {
-      return NextResponse.json({ error: "The passcode does not match." }, { status: 401 });
-    }
-  } catch {
-    return NextResponse.json({ error: "The agent passcode is not configured on the server." }, { status: 500 });
   }
 
   const parsed = requestSchema.safeParse(body);
@@ -60,9 +43,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (parsed.data.operation === "verify") {
-      return NextResponse.json({ status: "verified" });
-    }
     if (parsed.data.operation === "list") {
       const [items, activity] = await Promise.all([getApprovalInbox(), getAgentActivity()]);
       const flags = activity.filter((entry) => entry.outcome === "blocked" || entry.outcome === "error");
