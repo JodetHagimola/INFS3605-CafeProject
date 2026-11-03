@@ -1,0 +1,51 @@
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.summaryCard {
+  min-width: 0;
+  border-top: 2px solid var(--green);
+  background: var(--surface);
+  padding: 18px;
+}
+
+.summaryCard h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.summaryCount {
+  margin: 0;
+  color: var(--coffee);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 32px;
+}
+
+.summaryCard ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.summaryCard li + li {
+  margin-top: 6px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.attention {
+  border-left: 3px solid var(--rust);
+  background: var(--rust-pale);
+  padding: 12px 14px;
+}
+
+@media (max-width: 700px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

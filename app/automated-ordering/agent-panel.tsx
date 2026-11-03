@@ -1,20 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import type { DraftOrder } from "@/lib/agent/server";
+import { z } from "zod";
+import { draftOrderSchema, type DraftOrderRecord } from "@/lib/agent/draft-schema";
 import styles from "./agent-panel.module.css";
 
 type AgentPanelProps = {
-  initialDraft: DraftOrder | null;
+  initialDraft: DraftOrderRecord | null;
 };
 
-type AgentResponse = {
-  answer?: string;
-  draft?: DraftOrder | null;
-  error?: string;
-};
+const agentResponseSchema = z.union([
+  z.object({
+    answer: z.string(),
+    draft: draftOrderSchema.nullable(),
+    toolCalls: z.number().int().nonnegative(),
+  }).strict(),
+  z.object({ error: z.string() }).strict(),
+]);
 
-async function readAgentResponse(response: Response): Promise<AgentResponse> {
+async function readAgentResponse(response: Response): Promise<z.infer<typeof agentResponseSchema>> {
   if (response.status === 504) {
     throw new Error("The agent took too long to respond. Please try again.");
   }
@@ -26,10 +30,9 @@ async function readAgentResponse(response: Response): Promise<AgentResponse> {
     throw new Error("The server returned an invalid response. Please try again.");
   }
 
-  if (typeof result !== "object" || result === null || Array.isArray(result)) {
-    throw new Error("The server returned an invalid response. Please try again.");
-  }
-  return result as AgentResponse;
+  const parsed = agentResponseSchema.safeParse(result);
+  if (!parsed.success) throw new Error("The server returned an invalid response. Please try again.");
+  return parsed.data;
 }
 
 export function AgentPanel({ initialDraft }: AgentPanelProps) {
@@ -55,36 +58,15 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
         body: JSON.stringify({ passcode, request: requestText, forecastDate, isPublicHoliday }),
       });
       const result = await readAgentResponse(response);
-      if (!response.ok) throw new Error(result.error || "The agent could not complete the request.");
-      setDraft(result.draft ?? null);
+      if (!response.ok || "error" in result) {
+        throw new Error("error" in result ? result.error : "The agent could not complete the request.");
+      }
+      if (result.draft) setDraft(result.draft);
       setAnswer(result.answer || "The agent finished without a text response.");
     } catch (requestError) {
       setError(requestError instanceof Error
         ? requestError.message
         : "The AI request failed. Check the server settings and try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function approveDraft() {
-    if (!draft || draft.status !== "draft") return;
-    setBusy(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/agent/approve", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ passcode, draftId: draft.id }),
-      });
-      const result = await readAgentResponse(response);
-      if (!response.ok) throw new Error(result.error || "The draft could not be approved.");
-      setDraft({ ...draft, status: "approved" });
-    } catch (approvalError) {
-      setError(approvalError instanceof Error
-        ? approvalError.message
-        : "The draft could not be approved. Check the passcode and try again.");
     } finally {
       setBusy(false);
     }
@@ -132,14 +114,15 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
           />
         </label>
         <button className="primary-button" type="submit" disabled={busy}>
-          {busy ? "Working..." : "Create a draft"}
+          {busy ? "Working..." : "Run check"}
         </button>
       </form>
 
       <p className={styles.note}>
-        The passcode is checked on the server and is not saved. Your AI and
-        Supabase secret keys stay on the server. Select the holiday box only
-        when you have checked the café&apos;s holiday calendar.
+        The agent reads café data and can save a draft, but cannot place or send
+        an order. The passcode is checked on the server and is not saved; AI and
+        Supabase secret keys stay on the server. Select the
+        holiday box only when you have checked the café&apos;s holiday calendar.
       </p>
 
       {error && <p className={styles.error} role="alert">{error}</p>}
@@ -163,14 +146,26 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
         </div>}
 
         <h3>Forecasted drink sales</h3>
-        <p>
-          {Object.entries(draft.forecast.predictedSales)
-            .map(([product, quantity]) => `${product}: ${quantity}`)
-            .join(" · ")}
-        </p>
+        <div className={styles.tableWrap}>
+          <table>
+            <thead><tr><th>Drink</th><th>Low</th><th>Expected</th><th>High</th></tr></thead>
+            <tbody>{Object.entries(draft.forecast.predictedSales).map(([product, quantity]) => {
+              const range = draft.forecast.ranges?.[product];
+              return <tr key={product}>
+                <td>{product}</td>
+                <td>{range?.low ?? quantity}</td>
+                <td>{range?.expected ?? quantity}</td>
+                <td>{range?.high ?? quantity}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
         <p className={styles.muted}>
-          {draft.forecast.source}. Treat these predictions as indicative only.
+          {draft.forecast.source}. Treat these predictions as AI estimates and indicative only.
         </p>
+        {draft.forecast.assumptions && <ul className={styles.muted}>
+          {draft.forecast.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}
+        </ul>}
 
         <div className={styles.tableWrap}>
           <table>
@@ -218,12 +213,10 @@ export function AgentPanel({ initialDraft }: AgentPanelProps) {
         {draft.status === "draft"
           ? <div className={styles.approval}>
             <p>
-              Review quantities, suppliers, alternatives, and flags. Approving
-              records your decision only; it does not send an order.
+              Review quantities, suppliers, alternatives, and flags. Any request
+              to place or send an order must be created and decided in the Inbox.
             </p>
-            <button className="primary-button" type="button" disabled={busy || !passcode} onClick={approveDraft}>
-              Approve this draft
-            </button>
+            <a className="primary-button" href="/inbox">Open approval inbox</a>
           </div>
           : <p className={styles.approved}>You approved this draft. No supplier was contacted.</p>}
       </section>}

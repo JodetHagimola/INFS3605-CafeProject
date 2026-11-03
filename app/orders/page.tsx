@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getOrders } from "@/lib/supabase/server";
+import { SiteNav } from "../site-nav";
 import { OrderForm } from "../order-form";
 
 export const metadata: Metadata = { title: "Orders | Brewlytics" };
@@ -10,18 +11,7 @@ export default async function OrdersPage() {
 
   return (
     <main className="page-shell">
-      <header className="topbar">
-        <a className="wordmark" href="/" aria-label="Brewlytics home">
-          <span className="wordmark-mark" aria-hidden="true">B</span>
-          <span>Brewlytics</span>
-        </a>
-        <nav className="topbar-nav" aria-label="Main navigation">
-          <a href="/orders" aria-current="page">Orders</a>
-          <a href="/inventory">Inventory</a>
-          <a href="/automated-ordering">AI Forecast</a>
-          <a href="/order-requests">Supply requests</a>
-        </nav>
-      </header>
+      <SiteNav />
 
       <section className="orders-section" aria-labelledby="orders-title">
         <div className="section-heading">

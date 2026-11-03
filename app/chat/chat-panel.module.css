@@ -1,0 +1,143 @@
+.chat {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0 48px;
+}
+
+.credentials {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+  border-top: 2px solid var(--green);
+  background: var(--surface);
+}
+
+.credentials label,
+.composer label {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.credentials input:not([type="checkbox"]),
+.composer textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  padding: 9px 10px;
+}
+
+.credentials input:focus-visible,
+.composer textarea:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.holiday {
+  grid-column: 1 / -1;
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.note,
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.note {
+  margin: 0;
+}
+
+.messages {
+  display: grid;
+  gap: 12px;
+  min-height: 120px;
+}
+
+.empty {
+  align-self: center;
+  margin: 0;
+}
+
+.ownerMessage,
+.agentMessage {
+  border-top: 2px solid var(--line);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+
+.ownerMessage {
+  border-top-color: var(--coffee-light);
+}
+
+.agentMessage {
+  border-top-color: var(--green);
+}
+
+.speaker {
+  margin: 0 0 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.messageText {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.draft {
+  margin-top: 18px;
+}
+
+.draft h2 {
+  font-size: 19px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+}
+
+.tableWrap th,
+.tableWrap td {
+  min-width: 110px;
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.error {
+  margin: 0;
+  border-left: 3px solid var(--rust);
+  background: var(--rust-pale);
+  color: #713b2b;
+  padding: 12px 14px;
+}
+
+.composer {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-top: 2px solid var(--green);
+  background: var(--surface);
+}
+
+.composer button {
+  justify-self: start;
+}
+
+@media (max-width: 600px) {
+  .credentials {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

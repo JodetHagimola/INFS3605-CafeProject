@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import type { OrderRequest } from "@/lib/order-requests/server";
 import { getOrderRequests } from "@/lib/order-requests/server";
+import { SiteNav } from "../site-nav";
 import { DecisionForm } from "./decision-form";
 import { OrderRequestForm } from "./order-request-form";
 
@@ -58,18 +59,7 @@ export default async function OrderRequestsPage() {
 
   return (
     <main className="page-shell">
-      <header className="topbar">
-        <a className="wordmark" href="/" aria-label="Brewlytics home">
-          <span className="wordmark-mark" aria-hidden="true">B</span>
-          <span>Brewlytics</span>
-        </a>
-        <nav className="topbar-nav" aria-label="Main navigation">
-          <a href="/orders">Orders</a>
-          <a href="/inventory">Inventory</a>
-          <a href="/automated-ordering">AI Forecast</a>
-          <a href="/order-requests" aria-current="page">Supply requests</a>
-        </nav>
-      </header>
+      <SiteNav />
 
       <section className="orders-section" aria-labelledby="requests-title">
         <div className="section-heading">
