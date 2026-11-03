@@ -7,7 +7,7 @@ export function getGeminiModel() {
     throw new Error("The Gemini API key is not configured on the server.");
   }
 
-  const modelId = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+  const modelId = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
   return createGoogle()(modelId);
 }
 
