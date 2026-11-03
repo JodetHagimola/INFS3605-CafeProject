@@ -1277,6 +1277,14 @@ button,
   animation: route-enter var(--motion-base) var(--ease-soft) both;
 }
 
+::view-transition-old(.loading-fade-out) {
+  animation: loading-fade-out 160ms ease-out both;
+}
+
+::view-transition-new(.loading-fade-in) {
+  animation: loading-fade-in 260ms var(--ease-soft) 60ms both;
+}
+
 .route-progress {
   position: fixed;
   z-index: 100;
@@ -1329,6 +1337,15 @@ button,
 @keyframes route-enter {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes loading-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes loading-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes route-progress {
@@ -1524,5 +1541,10 @@ button,
   .launcher:hover {
     animation: none !important;
     transform: none !important;
+  }
+
+  ::view-transition-old(.loading-fade-out),
+  ::view-transition-new(.loading-fade-in) {
+    animation: none !important;
   }
 }

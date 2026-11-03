@@ -1,3 +1,9 @@
+import { ViewTransition } from "react";
+
 export default function Template({ children }: { children: React.ReactNode }) {
-  return <div className="route-enter">{children}</div>;
+  return (
+    <ViewTransition enter="loading-fade-in" default="none">
+      <div className="route-enter">{children}</div>
+    </ViewTransition>
+  );
 }
