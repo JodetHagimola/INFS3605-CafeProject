@@ -11,7 +11,7 @@
     "@ai-sdk/google": "^4.0.106",
     "@supabase/supabase-js": "latest",
     "ai": "^7.0.154",
-    "next": "latest",
+    "next": "16.4.4",
     "react": "latest",
     "react-dom": "latest",
     "server-only": "latest",
