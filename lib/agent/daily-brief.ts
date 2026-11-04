@@ -133,6 +133,12 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     const result = await generateText({
       model: getGeminiModel(),
       output: Output.object({ schema: dailyBriefSchema }),
+      providerOptions: {
+        google: {
+          // Keep the large brief schema for local validation, not Gemini's request.
+          structuredOutputs: false,
+        },
+      },
       instructions: BRIEF_INSTRUCTIONS,
       prompt: [
         `Prepare the café's brief for ${date} (Australia/Sydney).`,
