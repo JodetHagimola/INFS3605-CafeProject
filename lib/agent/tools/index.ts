@@ -15,30 +15,37 @@ import { recordDeliveryTool } from "./record-delivery";
 export function createAgentTools(defaults: {
   forecastDate: string;
   isPublicHoliday: boolean | null;
-}, options: { onApprovalCreated?: (approvalId: string, autoApproved: boolean) => void } = {}) {
+}, options: {
+  onApprovalCreated?: (approvalId: string, autoApproved: boolean) => void;
+  profile?: "full" | "daily-brief";
+} = {}) {
   let forecast: DemandForecast | null = null;
   let draft: DraftOrderRecord | null = null;
   let salesSummaryRead = false;
-  return {
-    tools: {
-      get_inventory: getInventoryTool,
-      get_recipes: getRecipesTool,
-      get_sales_summary: createGetSalesSummaryTool(() => {
-        salesSummaryRead = true;
-      }),
-      forecast_demand: createForecastDemandTool(defaults, () => salesSummaryRead, (result) => {
-        forecast = result;
-      }),
-      calculate_shortfalls: createCalculateShortfallsTool(() => forecast),
-      compare_supplier_prices: compareSupplierPricesTool,
-      check_deliveries: checkDeliveriesTool,
-      save_draft_order: createSaveDraftOrderTool(() => forecast, (result) => {
-        draft = result;
-      }, () => draft !== null),
+  const saveDraftOrderTool = createSaveDraftOrderTool(() => forecast, (result) => {
+    draft = result;
+  }, () => draft !== null);
+  const tools = {
+    get_inventory: getInventoryTool,
+    get_recipes: getRecipesTool,
+    get_sales_summary: createGetSalesSummaryTool(() => {
+      salesSummaryRead = true;
+    }),
+    forecast_demand: createForecastDemandTool(defaults, () => salesSummaryRead, (result) => {
+      forecast = result;
+    }),
+    calculate_shortfalls: createCalculateShortfallsTool(() => forecast),
+    compare_supplier_prices: compareSupplierPricesTool,
+    check_deliveries: checkDeliveriesTool,
+    save_draft_order: saveDraftOrderTool,
+    ...(options.profile === "daily-brief" ? {} : {
       request_human_approval: createRequestHumanApprovalTool(options.onApprovalCreated),
       log_wastage: logWastageTool,
       record_delivery: recordDeliveryTool,
-    },
+    }),
+  };
+  return {
+    tools,
     getDraft: () => draft,
   };
 }

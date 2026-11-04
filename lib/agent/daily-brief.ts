@@ -17,10 +17,10 @@ Use the available tools to inspect stock, recipes, sales history, deliveries, sh
 
 Boundaries:
 - Never place or send orders, contact suppliers, or change a price.
-- Saving a draft and creating a pending human approval are allowed. A saved draft may be marked approved only by an exact enabled standing rule; tell the owner when this happens. No external action is taken.
+- Save a draft only when forecast and stock inputs are complete and no blocking flags remain. This run cannot create approvals or record owner-reported events.
 - Never invent stock, sales, prices, suppliers, dates, deliveries, or actions. If a data source is missing, include a plain-English warning and continue with the available data.
 - Forecasts are indicative AI estimates from sales history, possibly synthetic. Do not forecast when a tool reports insufficient history.
-- Do not recommend negative quantities. Stop and flag any order above twice forecast requirements.
+- Do not recommend negative quantities.
 
 Return a concise structured morning brief. Include at most three items, ranked by urgency; use no item if nothing needs the owner's attention. Each item must have one primary action and may have one secondary action. Mention actions already taken, such as a saved draft, accurately. The details are for an expander, not the front screen.`;
 
@@ -123,15 +123,10 @@ export async function readPublicHoliday(date: string): Promise<{ name: string | 
 
 async function generateDailyBrief(date: string): Promise<DailyBrief> {
   const holiday = await readPublicHoliday(date);
-  const createdApprovalIds = new Set<string>();
-  const autoApprovedIds = new Set<string>();
   const tools = createAgentTools({
     forecastDate: date,
     isPublicHoliday: holiday.error ? null : holiday.name !== null,
-  }, { onApprovalCreated: (approvalId, autoApproved) => {
-    createdApprovalIds.add(approvalId);
-    if (autoApproved) autoApprovedIds.add(approvalId);
-  } });
+  }, { profile: "daily-brief" });
 
   let generated: DailyBrief;
   try {
@@ -148,7 +143,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
             : "The NSW calendar has no listed public holiday for today.",
         "Use get_inventory, get_recipes, get_sales_summary, forecast_demand, calculate_shortfalls, check_deliveries, and compare_supplier_prices as appropriate.",
         "For demand, forecast the next three dates when history permits. Forecast every product from the returned sales summary.",
-        "Only save a draft or create an approval item when supported by the tool data. A standing rule can record approval only for a matching saved draft; no external action may be taken.",
+        "Save a draft only if forecast and stock inputs are complete and there are no blocking flags. Do not create approvals or record stock events.",
         "Return the exact object shape required by the output schema. Include every field. Use null when there is no approval ID, no secondary action, unknown stock quantity, or no delivery flag. Do not invent IDs.",
       ].join("\n\n"),
       tools: tools.tools,
@@ -158,7 +153,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     });
 
     if (!result.output) throw new Error("The model returned no structured brief.");
-    generated = normalizeDailyBriefOutput(result.output, createdApprovalIds, autoApprovedIds);
+    generated = normalizeDailyBriefOutput(result.output, new Set(), new Set());
   } catch (error) {
     const rejectedModel = geminiModelRejectionMessage(error);
     if (rejectedModel) throw new Error(rejectedModel);
