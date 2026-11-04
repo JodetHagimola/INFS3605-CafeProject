@@ -60,16 +60,6 @@ export function cafeLocalDate(): string {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function mapStoredBrief(row: Record<string, unknown>): DailyBrief {
-  return dailyBriefSchema.parse({
-    greeting: row.greeting,
-    statusLine: row.status_line,
-    items: row.items,
-    allClear: row.all_clear,
-    details: row.details,
-  });
-}
-
 async function loadCachedBrief(date: string): Promise<DailyBrief | null> {
   let data;
   let error;
@@ -88,12 +78,21 @@ async function loadCachedBrief(date: string): Promise<DailyBrief | null> {
     throw new Error("Today's brief could not be loaded. Check the daily brief setup.");
   }
   if (!data) return null;
-  try {
-    return mapStoredBrief(data as unknown as Record<string, unknown>);
-  } catch (error) {
-    console.error("The cached daily brief failed validation:", error instanceof Error ? error.name : "Unknown error");
-    throw new Error("Today's saved brief has invalid data and could not be shown.");
+  const parsed = dailyBriefSchema.safeParse({
+    greeting: data.greeting,
+    statusLine: data.status_line,
+    items: data.items,
+    allClear: data.all_clear,
+    details: data.details,
+  });
+  if (!parsed.success) {
+    console.error("The cached daily brief failed validation; it will be regenerated:", parsed.error.issues.map((issue) => ({
+      path: issue.path,
+      code: issue.code,
+    })));
+    return null;
   }
+  return parsed.data;
 }
 
 export async function readPublicHoliday(date: string): Promise<{ name: string | null; error: boolean }> {
