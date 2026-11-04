@@ -4,7 +4,7 @@
   right: 24px;
   bottom: 86px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   width: min(440px, calc(100vw - 32px));
   height: min(680px, calc(100dvh - 120px));
   overflow: hidden;
@@ -92,6 +92,14 @@
   gap: 14px;
   overflow-y: auto;
   padding: 16px;
+}
+
+.voiceStatus {
+  margin: 0;
+  border-bottom: 1px solid rgb(89 57 39 / 8%);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 16px;
 }
 
 .historyLoading {
