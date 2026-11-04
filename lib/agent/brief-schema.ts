@@ -5,6 +5,58 @@ const briefActionSchema = z.object({
   approvalId: z.string().uuid().optional(),
 }).strict();
 
+const briefOutputActionSchema = z.object({
+  label: z.enum(["Approve", "Edit", "Confirm", "Dismiss"]),
+  approvalId: z.string().nullable(),
+});
+
+export const dailyBriefOutputSchema = z.object({
+  greeting: z.string(),
+  statusLine: z.string(),
+  items: z.array(z.object({
+    title: z.string(),
+    why: z.string(),
+    actionTaken: z.string(),
+    primaryAction: briefOutputActionSchema,
+    secondaryAction: briefOutputActionSchema.nullable(),
+  })),
+  allClear: z.string(),
+  details: z.object({
+    lowStock: z.array(z.object({
+      ingredientId: z.string(),
+      ingredient: z.string(),
+      quantity: z.number().nullable(),
+      unit: z.string(),
+      status: z.string(),
+    })),
+    forecasts: z.array(z.object({
+      date: z.string(),
+      product: z.string(),
+      low: z.number(),
+      expected: z.number(),
+      high: z.number(),
+    })),
+    deliveries: z.array(z.object({
+      deliveryId: z.string(),
+      ingredient: z.string(),
+      orderedQuantity: z.number(),
+      receivedQuantity: z.number(),
+      expectedDate: z.string(),
+      status: z.string(),
+      flag: z.string().nullable(),
+    })),
+    supplierComparison: z.array(z.object({
+      ingredient: z.string(),
+      supplier: z.string(),
+      price: z.number(),
+      deliveryTime: z.string(),
+      minimumOrder: z.number(),
+    })),
+    assumptions: z.array(z.string()),
+    dataWarnings: z.array(z.string()),
+  }),
+});
+
 export const dailyBriefSchema = z.object({
   greeting: z.string().trim().min(1).max(160),
   statusLine: z.string().trim().min(1).max(240),
@@ -54,3 +106,39 @@ export const dailyBriefSchema = z.object({
 }).strict();
 
 export type DailyBrief = z.infer<typeof dailyBriefSchema>;
+
+type DailyBriefOutput = z.infer<typeof dailyBriefOutputSchema>;
+
+export function normalizeDailyBriefOutput(
+  output: DailyBriefOutput,
+  createdApprovalIds: ReadonlySet<string>,
+  autoApprovedIds: ReadonlySet<string>,
+): DailyBrief {
+  const normalizeAction = (action: DailyBriefOutput["items"][number]["primaryAction"]) => {
+    const approvalId = action.approvalId && createdApprovalIds.has(action.approvalId)
+      ? action.approvalId
+      : undefined;
+    if (approvalId && autoApprovedIds.has(approvalId)) {
+      return { label: "Confirm" as const, approvalId };
+    }
+    if ((action.label === "Approve" || action.label === "Dismiss") && !approvalId) {
+      return { label: "Edit" as const };
+    }
+    return approvalId ? { label: action.label, approvalId } : { label: action.label };
+  };
+
+  return dailyBriefSchema.parse({
+    greeting: output.greeting,
+    statusLine: output.statusLine,
+    items: output.items.map((item, index) => ({
+      id: `brief-item-${index + 1}`,
+      title: item.title,
+      why: item.why,
+      actionTaken: item.actionTaken,
+      primaryAction: normalizeAction(item.primaryAction),
+      ...(item.secondaryAction ? { secondaryAction: normalizeAction(item.secondaryAction) } : {}),
+    })),
+    allClear: output.allClear,
+    details: output.details,
+  });
+}

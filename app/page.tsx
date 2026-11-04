@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "Your café's inventory, deliveries, and agent check for today.",
 };
 
+export const maxDuration = 60;
+
 function validDate(value: string | undefined): string | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const parsed = new Date(`${value}T00:00:00.000Z`);

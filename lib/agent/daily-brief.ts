@@ -3,7 +3,12 @@ import "server-only";
 import { generateText, isStepCount, Output } from "ai";
 import { inventoryClient } from "@/lib/inventory/server";
 import { createAgentTools } from "./tools";
-import { dailyBriefSchema, type DailyBrief } from "./brief-schema";
+import {
+  dailyBriefOutputSchema,
+  dailyBriefSchema,
+  normalizeDailyBriefOutput,
+  type DailyBrief,
+} from "./brief-schema";
 import { getGeminiModel, geminiModelRejectionMessage } from "./model";
 
 const BRIEF_INSTRUCTIONS = `You are Brewlytics, a proactive morning assistant for a small café owner.
@@ -132,13 +137,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
   try {
     const result = await generateText({
       model: getGeminiModel(),
-      output: Output.object({ schema: dailyBriefSchema }),
-      providerOptions: {
-        google: {
-          // Keep the large brief schema for local validation, not Gemini's request.
-          structuredOutputs: false,
-        },
-      },
+      output: Output.object({ schema: dailyBriefOutputSchema }),
       instructions: BRIEF_INSTRUCTIONS,
       prompt: [
         `Prepare the café's brief for ${date} (Australia/Sydney).`,
@@ -150,16 +149,16 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
         "Use get_inventory, get_recipes, get_sales_summary, forecast_demand, calculate_shortfalls, check_deliveries, and compare_supplier_prices as appropriate.",
         "For demand, forecast the next three dates when history permits. Forecast every product from the returned sales summary.",
         "Only save a draft or create an approval item when supported by the tool data. A standing rule can record approval only for a matching saved draft; no external action may be taken.",
-        "For every displayed item, ensure its primary action points to an existing approval only when you have its exact approval ID. Otherwise choose Edit, Confirm, or Dismiss without inventing an ID.",
+        "Return the exact object shape required by the output schema. Include every field. Use null when there is no approval ID, no secondary action, unknown stock quantity, or no delivery flag. Do not invent IDs.",
       ].join("\n\n"),
       tools: tools.tools,
-      stopWhen: isStepCount(10),
+      stopWhen: isStepCount(6),
       maxRetries: 0,
-      abortSignal: AbortSignal.timeout(45_000),
+      abortSignal: AbortSignal.timeout(55_000),
     });
 
     if (!result.output) throw new Error("The model returned no structured brief.");
-    generated = dailyBriefSchema.parse(result.output);
+    generated = normalizeDailyBriefOutput(result.output, createdApprovalIds, autoApprovedIds);
   } catch (error) {
     const rejectedModel = geminiModelRejectionMessage(error);
     if (rejectedModel) throw new Error(rejectedModel);
@@ -170,28 +169,10 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     throw new Error("Today's brief could not be generated. Check the café data and try again.");
   }
 
-  generated.items = generated.items.map((item) => {
-    const validateAction = (action: DailyBrief["items"][number]["primaryAction"]) => {
-      if (action.approvalId && autoApprovedIds.has(action.approvalId)) {
-        return { label: "Confirm" as const, approvalId: action.approvalId };
-      }
-      if ((action.label === "Approve" || action.label === "Dismiss")
-        && (!action.approvalId || !createdApprovalIds.has(action.approvalId))) {
-        return { label: "Edit" as const };
-      }
-      return action;
-    };
-    return {
-      ...item,
-      primaryAction: validateAction(item.primaryAction),
-      ...(item.secondaryAction ? { secondaryAction: validateAction(item.secondaryAction) } : {}),
-    };
-  });
-
   if (holiday.error && !generated.details.dataWarnings.some((warning) => /holiday/i.test(warning))) {
     generated.details.dataWarnings.push("I couldn't check today's NSW public holiday calendar.");
   }
-  return dailyBriefSchema.parse(generated);
+  return generated;
 }
 
 export async function getDailyBrief(options: { refresh?: boolean; date?: string } = {}): Promise<DailyBrief & { briefDate: string }> {
