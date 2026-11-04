@@ -8,6 +8,35 @@ import type { ApprovalItem } from "@/lib/agent/approval-schema";
 import { LoadingButton, Skeleton } from "./ui/feedback";
 import styles from "./agent-dock.module.css";
 
+type VoiceRecognitionResult = {
+  isFinal: boolean;
+  0: { transcript: string };
+};
+
+type VoiceRecognitionEvent = {
+  resultIndex: number;
+  results: ArrayLike<VoiceRecognitionResult>;
+};
+
+type VoiceRecognitionErrorEvent = { error: string };
+
+type VoiceRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: VoiceRecognitionEvent) => void) | null;
+  onerror: ((event: VoiceRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+type VoiceWindow = Window & {
+  SpeechRecognition?: new () => VoiceRecognition;
+  webkitSpeechRecognition?: new () => VoiceRecognition;
+};
+
 type Thread = { id: string; title: string };
 type DisplayMessage = AgentMessage | {
   id: string;
@@ -55,10 +84,140 @@ export function AgentDock() {
   const [sending, setSending] = useState(false);
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("Voice assistant is off.");
   const loaded = useRef(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
+  const recognition = useRef<VoiceRecognition | null>(null);
+  const recognitionRunning = useRef(false);
+  const voiceEnabledRef = useRef(false);
+  const voiceMode = useRef<"off" | "wake" | "command" | "response">("off");
+  const greetingFinished = useRef(false);
+  const submitMessageRef = useRef<(text: string) => Promise<void>>(async () => {});
   const hasOwnerAction = messages.some((message) =>
     message.parts.some((part) => part.type === "approval_card" && part.item.status === "pending_approval"));
+
+  function startVoiceRecognition() {
+    if (!voiceEnabledRef.current || !recognition.current || recognitionRunning.current) return;
+    try {
+      recognition.current.start();
+      recognitionRunning.current = true;
+      setVoiceStatus(voiceMode.current === "wake"
+        ? "Listening for “Brewly”."
+        : "Listening for your question.");
+    } catch (startError) {
+      voiceEnabledRef.current = false;
+      voiceMode.current = "off";
+      setVoiceEnabled(false);
+      setVoiceStatus("Voice assistant is off.");
+      setError(startError instanceof Error
+        ? `Voice recognition couldn't start: ${startError.message}`
+        : "Voice recognition couldn't start.");
+    }
+  }
+
+  function speak(text: string, onComplete: () => void) {
+    if (!("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) {
+      onComplete();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = onComplete;
+    utterance.onerror = () => {
+      setError("The voice response couldn't be played. You can still read it in the chat.");
+      onComplete();
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopVoice() {
+    voiceEnabledRef.current = false;
+    voiceMode.current = "off";
+    recognition.current?.abort();
+    recognition.current = null;
+    recognitionRunning.current = false;
+    window.speechSynthesis?.cancel();
+    setVoiceEnabled(false);
+    setVoiceStatus("Voice assistant is off.");
+  }
+
+  function toggleVoice() {
+    if (voiceEnabledRef.current) {
+      stopVoice();
+      return;
+    }
+
+    const voiceWindow = window as VoiceWindow;
+    const Recognition = voiceWindow.SpeechRecognition ?? voiceWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setError("Voice recognition isn't supported in this browser. Try a browser with Web Speech API support.");
+      return;
+    }
+
+    setError("");
+    const instance = new Recognition();
+    instance.continuous = true;
+    instance.interimResults = false;
+    instance.lang = "en-AU";
+    instance.onresult = (event) => {
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (!result.isFinal) continue;
+        const transcript = result[0].transcript.trim();
+        if (voiceMode.current === "wake" && /\bbrewly\b/i.test(transcript)) {
+          voiceMode.current = "command";
+          greetingFinished.current = false;
+          setOpen(true);
+          setVoiceStatus("Brewly is ready. Ask your question after the greeting.");
+          instance.stop();
+          speak("Hi, how can I help you today?", () => {
+            greetingFinished.current = true;
+            if (voiceEnabledRef.current && voiceMode.current === "command") startVoiceRecognition();
+          });
+          return;
+        }
+        if (voiceMode.current === "command" && transcript) {
+          voiceMode.current = "response";
+          greetingFinished.current = false;
+          setVoiceStatus("Sending your request to Brewly.");
+          setInput(transcript);
+          instance.stop();
+          void submitMessageRef.current(transcript);
+          return;
+        }
+      }
+    };
+    instance.onerror = (event) => {
+      if (event.error === "aborted" || event.error === "no-speech") return;
+      const descriptions: Record<string, string> = {
+        "audio-capture": "No microphone was found.",
+        "not-allowed": "Microphone access was denied. Allow microphone access to use voice chat.",
+        "service-not-allowed": "The browser blocked voice recognition.",
+      };
+      setError(descriptions[event.error] ?? `Voice recognition failed (${event.error}).`);
+      stopVoice();
+    };
+    instance.onend = () => {
+      recognitionRunning.current = false;
+      if (voiceEnabledRef.current
+        && (voiceMode.current === "wake" || (voiceMode.current === "command" && greetingFinished.current))) {
+        startVoiceRecognition();
+      }
+    };
+
+    recognition.current = instance;
+    voiceEnabledRef.current = true;
+    voiceMode.current = "wake";
+    setVoiceEnabled(true);
+    startVoiceRecognition();
+  }
+
+  useEffect(() => () => {
+    voiceEnabledRef.current = false;
+    recognition.current?.abort();
+    window.speechSynthesis?.cancel();
+  }, []);
 
   useEffect(() => {
     if (!open || loaded.current) return;
@@ -114,10 +273,18 @@ export function AgentDock() {
     }
   }
 
-  async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const text = input.trim();
-    if (!text || !thread || sending || creatingConversation) return;
+  async function submitMessage(text: string) {
+    const request = text.trim();
+    if (!request) return;
+    if (!thread || sending || creatingConversation) {
+      setError("The chat isn't ready yet. Please try your voice request again.");
+      if (voiceMode.current === "response") {
+        voiceMode.current = "wake";
+        setVoiceStatus("Listening for “Brewly”.");
+        startVoiceRecognition();
+      }
+      return;
+    }
 
     setSending(true);
     setTool("");
@@ -125,13 +292,14 @@ export function AgentDock() {
     setInput("");
     const ownerId = `owner-${Date.now()}`;
     const agentId = `agent-${Date.now()}`;
+    let responseText = "";
     setMessages((current) => [
       ...current,
       {
         id: ownerId,
         role: "owner",
-        content: text,
-        parts: [{ type: "text", text }],
+        content: request,
+        parts: [{ type: "text", text: request }],
         createdAt: new Date().toISOString(),
       },
       {
@@ -150,7 +318,7 @@ export function AgentDock() {
         body: JSON.stringify({
           operation: "message",
           threadId: thread.id,
-          text,
+          text: request,
           route: window.location.pathname,
           visibleItemId: document.querySelector<HTMLElement>("[data-visible-item-id]")?.dataset.visibleItemId,
         }),
@@ -181,6 +349,7 @@ export function AgentDock() {
           if (typeof event !== "object" || event === null || !("type" in event)) continue;
           if (event.type === "text" && "text" in event && typeof event.text === "string") {
             streamedText += event.text;
+            responseText = streamedText;
             setMessages((current) => current.map((message) => message.id === agentId
               ? { ...message, content: streamedText, parts: [{ type: "text", text: streamedText }] }
               : message));
@@ -196,14 +365,36 @@ export function AgentDock() {
         }
         if (done) break;
       }
-      setThread((current) => current ? { ...current, title: current.title === "New conversation" ? text.slice(0, 60) : current.title } : current);
+      setThread((current) => current ? { ...current, title: current.title === "New conversation" ? request.slice(0, 60) : current.title } : current);
+      if (voiceMode.current === "response" && voiceEnabledRef.current) {
+        setVoiceStatus("Brewly is replying.");
+        speak(responseText || "I couldn't prepare a spoken reply.", () => {
+          if (voiceEnabledRef.current) {
+            voiceMode.current = "wake";
+            setVoiceStatus("Listening for “Brewly”.");
+            startVoiceRecognition();
+          }
+        });
+      }
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "The agent could not complete this message.");
       setMessages((current) => current.filter((message) => message.id !== agentId));
+      if (voiceMode.current === "response" && voiceEnabledRef.current) {
+        voiceMode.current = "wake";
+        setVoiceStatus("Listening for “Brewly”.");
+        startVoiceRecognition();
+      }
     } finally {
       setSending(false);
       setTool("");
     }
+  }
+
+  submitMessageRef.current = submitMessage;
+
+  function sendMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitMessage(input);
   }
 
   async function decide(item: ApprovalItem, decision: "approved" | "rejected") {
@@ -325,12 +516,16 @@ export function AgentDock() {
               <h2>Ask your agent</h2>
             </div>
             <div className={styles.headerActions}>
+              <button type="button" aria-pressed={voiceEnabled} onClick={toggleVoice}>
+                {voiceEnabled ? "Turn voice off" : "Enable voice"}
+              </button>
               <LoadingButton type="button" busy={creatingConversation} busyLabel="Starting..." disabled={sending} onClick={() => void newConversation()}>
                 New conversation
               </LoadingButton>
               <button type="button" className={styles.close} aria-label="Collapse chat" onClick={() => setOpen(false)}>×</button>
             </div>
           </header>
+          <p className={styles.voiceStatus} role="status" aria-live="polite">{voiceStatus}</p>
           <div className={styles.messages} aria-live="polite" aria-busy={sending || loadingHistory}>
             {loadingHistory
               ? <div className={styles.historyLoading} role="status">

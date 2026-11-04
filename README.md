@@ -19,6 +19,10 @@ recipes, sales aggregates, supplier data, and deliveries. Gemini generates
 indicative drink-demand estimates from the sales summary; TypeScript validates
 the estimates and computes ingredient requirements, shortfalls, and totals.
 Forecasts may use synthetic sales history and are not purchasing guarantees.
+The chat dock also supports optional voice chat in browsers with Web Speech API
+support. Select **Enable voice** to grant microphone access, then say “Brewly”
+to hear the greeting and ask a question aloud. Voice listening can be turned
+off at any time and is not started until enabled.
 
 The agent can save draft orders and record explicitly owner-reported wastage or
 deliveries. Tool calls and outcomes are recorded in `agent_activity`. Purchases, supplier contact or switches, and price changes create approval
