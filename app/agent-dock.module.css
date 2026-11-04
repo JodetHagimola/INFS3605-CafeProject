@@ -56,6 +56,12 @@
   font-weight: 500;
 }
 
+.voiceStatus {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .headerActions {
   display: flex;
   align-items: center;
@@ -173,6 +179,12 @@
 .headerActions button:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+.headerActions button[aria-pressed="true"] {
+  border-color: var(--coffee);
+  background: var(--coffee);
+  color: var(--cream);
 }
 
 .cardStatus,

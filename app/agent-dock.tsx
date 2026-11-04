@@ -17,6 +17,32 @@ type DisplayMessage = AgentMessage | {
   createdAt: string;
 };
 
+type VoicePhase = "off" | "wake" | "greeting" | "command" | "sending";
+
+type SpeechRecognitionResult = {
+  isFinal: boolean;
+  0: { transcript: string };
+};
+
+type SpeechRecognitionEvent = {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResult>;
+};
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
 const threadResponseSchema = z.object({
   thread: z.object({ id: z.string().uuid(), title: z.string() }).strict(),
   messages: z.array(agentMessageSchema),
@@ -55,8 +81,15 @@ export function AgentDock() {
   const [sending, setSending] = useState(false);
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("");
   const loaded = useRef(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceEnabledRef = useRef(false);
+  const voicePhaseRef = useRef<VoicePhase>("off");
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendVoiceMessageRef = useRef<(text: string) => void>(() => undefined);
   const hasOwnerAction = messages.some((message) =>
     message.parts.some((part) => part.type === "approval_card" && part.item.status === "pending_approval"));
 
@@ -91,6 +124,13 @@ export function AgentDock() {
     messagesEnd.current?.scrollIntoView({ behavior, block: "end" });
   }, [messages, open]);
 
+  useEffect(() => () => {
+    voiceEnabledRef.current = false;
+    recognitionRef.current?.abort();
+    window.speechSynthesis?.cancel();
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+  }, []);
+
   async function newConversation() {
     if (creatingConversation || sending) return;
     setCreatingConversation(true);
@@ -114,10 +154,47 @@ export function AgentDock() {
     }
   }
 
-  async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const text = input.trim();
-    if (!text || !thread || sending || creatingConversation) return;
+  function scheduleWakeRestart() {
+    if (!voiceEnabledRef.current || voicePhaseRef.current !== "wake" || restartTimerRef.current) return;
+    restartTimerRef.current = setTimeout(() => {
+      restartTimerRef.current = null;
+      if (!voiceEnabledRef.current || voicePhaseRef.current !== "wake") return;
+      try {
+        recognitionRef.current?.start();
+      } catch {
+        setError("Voice recognition could not restart. Turn voice off and on again to retry.");
+        setVoiceStatus("Voice recognition stopped.");
+        voiceEnabledRef.current = false;
+        voicePhaseRef.current = "off";
+        setVoiceEnabled(false);
+      }
+    }, 250);
+  }
+
+  function stopVoice(message = "Voice assistant off.") {
+    voiceEnabledRef.current = false;
+    voicePhaseRef.current = "off";
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    window.speechSynthesis?.cancel();
+    setVoiceEnabled(false);
+    setVoiceStatus(message);
+  }
+
+  async function submitMessage(text: string, speakResponse = false) {
+    if (!text || !thread || sending || creatingConversation) {
+      if (speakResponse && voiceEnabledRef.current) {
+        setError("The chat is not ready for a voice request. Please try again.");
+        voicePhaseRef.current = "wake";
+        setVoiceStatus('Listening for "Brewly".');
+        scheduleWakeRestart();
+      }
+      return;
+    }
 
     setSending(true);
     setTool("");
@@ -197,12 +274,125 @@ export function AgentDock() {
         if (done) break;
       }
       setThread((current) => current ? { ...current, title: current.title === "New conversation" ? text.slice(0, 60) : current.title } : current);
+      if (speakResponse && streamedText.trim() && voiceEnabledRef.current) {
+        voicePhaseRef.current = "sending";
+        const reply = new SpeechSynthesisUtterance(streamedText);
+        reply.onend = () => {
+          if (!voiceEnabledRef.current) return;
+          voicePhaseRef.current = "wake";
+          setVoiceStatus('Listening for "Brewly".');
+          scheduleWakeRestart();
+        };
+        window.speechSynthesis.speak(reply);
+      } else if (speakResponse && voiceEnabledRef.current) {
+        voicePhaseRef.current = "wake";
+        setVoiceStatus('Listening for "Brewly".');
+        scheduleWakeRestart();
+      }
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "The agent could not complete this message.");
       setMessages((current) => current.filter((message) => message.id !== agentId));
+      if (speakResponse && voiceEnabledRef.current) {
+        voicePhaseRef.current = "wake";
+        setVoiceStatus('Listening for "Brewly".');
+        scheduleWakeRestart();
+      }
     } finally {
       setSending(false);
       setTool("");
+    }
+  }
+
+  sendVoiceMessageRef.current = (text) => { void submitMessage(text, true); };
+
+  function sendMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitMessage(input.trim());
+  }
+
+  function toggleVoice() {
+    if (voiceEnabledRef.current) {
+      stopVoice();
+      return;
+    }
+
+    const speechWindow = window as Window & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      const message = "Voice recognition is not supported in this browser. Try a browser that supports speech recognition.";
+      setVoiceStatus(message);
+      setError(message);
+      return;
+    }
+    if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === "undefined") {
+      const message = "Spoken replies are not supported in this browser.";
+      setVoiceStatus(message);
+      setError(message);
+      return;
+    }
+
+    setError("");
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = navigator.language;
+    recognitionRef.current = recognition;
+    voiceEnabledRef.current = true;
+    voicePhaseRef.current = "wake";
+    setVoiceEnabled(true);
+    setVoiceStatus('Listening for "Brewly".');
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from({ length: event.results.length - event.resultIndex }, (_, index) => {
+        const result = event.results[event.resultIndex + index];
+        return result.isFinal ? result[0].transcript : "";
+      }).join(" ").trim();
+      if (!transcript) return;
+
+      if (voicePhaseRef.current === "wake" && /\bbrewly\b/i.test(transcript)) {
+        voicePhaseRef.current = "greeting";
+        setOpen(true);
+        setVoiceStatus("Greeting you...");
+        recognition.stop();
+        const greeting = new SpeechSynthesisUtterance("Hi, how can I help you today?");
+        greeting.onend = () => {
+          if (!voiceEnabledRef.current) return;
+          voicePhaseRef.current = "command";
+          setVoiceStatus("Listening for your request...");
+          try {
+            recognition.start();
+          } catch {
+            setError("Voice recognition could not restart after the greeting. Turn voice off and on again to retry.");
+            stopVoice("Voice recognition stopped.");
+          }
+        };
+        window.speechSynthesis.speak(greeting);
+      } else if (voicePhaseRef.current === "command") {
+        voicePhaseRef.current = "sending";
+        setVoiceStatus("Sending your request...");
+        recognition.stop();
+        sendVoiceMessageRef.current(transcript);
+      }
+    };
+    recognition.onend = scheduleWakeRestart;
+    recognition.onerror = (event) => {
+      if (event.error === "aborted" || event.error === "no-speech") return;
+      const message = event.error === "not-allowed"
+        ? "Microphone access was denied. Allow microphone access in your browser and try again."
+        : "Voice recognition encountered an error. Turn voice off and on again to retry.";
+      setError(message);
+      stopVoice("Voice recognition stopped.");
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      const message = "Voice recognition could not start. Check microphone access and try again.";
+      setError(message);
+      stopVoice("Voice recognition stopped.");
     }
   }
 
@@ -323,11 +513,21 @@ export function AgentDock() {
             <div>
               <p className={styles.brand}>BREWLYTICS</p>
               <h2>Ask your agent</h2>
+              {voiceStatus && <p className={styles.voiceStatus} role="status" aria-live="polite">{voiceStatus}</p>}
             </div>
             <div className={styles.headerActions}>
               <LoadingButton type="button" busy={creatingConversation} busyLabel="Starting..." disabled={sending} onClick={() => void newConversation()}>
                 New conversation
               </LoadingButton>
+              <button
+                type="button"
+                aria-pressed={voiceEnabled}
+                aria-label={voiceEnabled ? "Turn off voice assistant" : "Turn on voice assistant"}
+                disabled={loadingHistory || !thread || creatingConversation}
+                onClick={toggleVoice}
+              >
+                {voiceEnabled ? "Voice on" : "Voice"}
+              </button>
               <button type="button" className={styles.close} aria-label="Collapse chat" onClick={() => setOpen(false)}>×</button>
             </div>
           </header>
