@@ -11,6 +11,7 @@ import type { DraftOrderRecord } from "@/lib/agent/draft-schema";
 import { createRequestHumanApprovalTool } from "./request-human-approval";
 import { logWastageTool } from "./log-wastage";
 import { recordDeliveryTool } from "./record-delivery";
+import { recordedOperationsTool } from "./recorded-operations";
 
 export function createAgentTools(defaults: {
   forecastDate: string;
@@ -27,6 +28,7 @@ export function createAgentTools(defaults: {
   }, () => draft !== null);
   const tools = {
     get_inventory: getInventoryTool,
+    get_recorded_operations: recordedOperationsTool,
     get_recipes: getRecipesTool,
     get_sales_summary: createGetSalesSummaryTool(() => {
       salesSummaryRead = true;

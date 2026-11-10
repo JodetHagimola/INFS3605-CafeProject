@@ -1,3 +1,4 @@
+import { sydneyDay } from "@/lib/inventory-sales/operations-model";
 import { tool } from "ai";
 import { z } from "zod";
 import { getInventory } from "@/lib/inventory/server";
@@ -108,7 +109,7 @@ export async function calculateShortfalls(forecast: DemandForecast | null): Prom
     const receivedQuantity = nonnegativeNumber(row.received_quantity, "Received quantity");
     const receivedAt = textValue(row.received_at, "Receipt timestamp");
     if (!Number.isFinite(Date.parse(receivedAt))) throw new Error("A delivery receipt has an invalid timestamp.");
-    if (receivedAt.slice(0, 10) <= endDate) {
+    { // Current stock already includes every saved receipt.
       receivedByDelivery.set(deliveryId, (receivedByDelivery.get(deliveryId) ?? 0) + receivedQuantity);
     }
     return { deliveryId, receivedQuantity, receivedAt };
@@ -120,7 +121,7 @@ export async function calculateShortfalls(forecast: DemandForecast | null): Prom
     expectedDate: validDate(row.expected_date, "Delivery expected date"),
   }));
   const deliveriesByIngredient = new Map<string, number>();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = sydneyDay(new Date().toISOString());
   const overdueDeliveryFlags = new Set<string>();
   for (const delivery of deliveries) {
     if (delivery.expectedDate < today) {

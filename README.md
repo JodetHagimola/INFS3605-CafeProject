@@ -79,3 +79,13 @@ including `ML/api.py`, `ML/data/`, the synthetic CSV, `ML/forecast_model.joblib`
 and `ML/agent_forecast_table.json`. `app/api/recommendations/route.ts` is also
 an older recommendation route. They are intentionally retained pending review;
 the Gemini agent does not call the Python service.
+
+### Inventory operations integration
+
+The sales and delivery pages now share the signed workspace session and agent
+stock data. See [INTEGRATION_SETUP.md](INTEGRATION_SETUP.md) before installing
+`supabase/inventory-agent-integration.sql` on an existing database. The migration
+unifies original ordered quantity and receipt-derived outstanding balances;
+it does not reset inventory. Today includes recorded daily operations, and the
+chat tool `get_recorded_operations` reads the same data. Validation and limits
+are recorded in [INTEGRATION_TEST_RESULTS.md](INTEGRATION_TEST_RESULTS.md).
