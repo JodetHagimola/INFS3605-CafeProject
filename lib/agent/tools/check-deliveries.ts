@@ -1,3 +1,4 @@
+import { sydneyDay } from "@/lib/inventory-sales/operations-model";
 import "server-only";
 
 import { tool } from "ai";
@@ -27,7 +28,7 @@ export async function getDeliveryChecks() {
         : current.latestReceivedAt,
     });
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const today = sydneyDay(new Date().toISOString());
   return deliveryRows.map((row) => {
     const deliveryId = idValue(row.delivery_id, "Delivery ID");
     const ingredientId = idValue(row.ingredient_id, "Delivery ingredient ID");

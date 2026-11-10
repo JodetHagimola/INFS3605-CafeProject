@@ -1,3 +1,4 @@
+import { withConsistentBrief } from "./brief-freshness";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -496,7 +497,7 @@ export async function readPublicHoliday(date: string): Promise<{ name: string | 
   }
 }
 
-async function loadCachedBrief(date: string): Promise<{ brief: DailyBrief | null; warning?: string }> {
+async function loadCachedBrief(date: string, fingerprint: string): Promise<{ brief: DailyBrief | null; warning?: string }> {
   try {
     const { data, error } = await inventoryClient()
       .from("daily_briefs")
@@ -509,7 +510,7 @@ async function loadCachedBrief(date: string): Promise<{ brief: DailyBrief | null
     const detailsObject = storedDetails && typeof storedDetails === "object" && !Array.isArray(storedDetails)
       ? storedDetails as Record<string, unknown>
       : null;
-    if (detailsObject?.schemaVersion !== CACHE_SCHEMA_VERSION) return { brief: null };
+    if (detailsObject?.schemaVersion !== CACHE_SCHEMA_VERSION || detailsObject?.sourceFingerprint !== fingerprint) return { brief: null };
     const parsed = dailyBriefSchema.safeParse({
       greeting: data.greeting,
       status_line: data.status_line,
@@ -673,8 +674,8 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
   try {
     if (deliveryRows && receiptRows) {
       for (const row of receiptRows) {
-        const receivedAt = parseText(row.received_at, "Delivery receipt date");
-        if (sydneyDate(receivedAt) > date) continue;
+        sydneyDate(parseText(row.received_at, "Delivery receipt date"));
+        // Current stock includes all posted receipts, including for simulated dates.
         const deliveryId = String(row.delivery_id);
         receivedByDelivery.set(
           deliveryId,
@@ -786,18 +787,20 @@ export async function getDailyBrief(options: { refresh?: boolean; date?: string 
   const date = options.date ?? cafeLocalDate();
   if (!isValidISODate(date)) throw new Error("The requested brief date is invalid.");
 
-  if (!options.refresh) {
-    const cached = await loadCachedBrief(date);
-    if (cached.brief) return { ...cached.brief, briefDate: date };
-    const brief = await generateDailyBrief(date);
-    if (cached.warning) addWarning(brief.data_warnings, cached.warning);
-    return saveBrief(date, brief);
-  }
-
-  return saveBrief(date, await generateDailyBrief(date));
+  return withConsistentBrief({
+    refresh: options.refresh,
+    fingerprint: async () => {
+      const { data, error } = await inventoryClient().rpc("inventory_brief_fingerprint");
+      if (error || typeof data !== "string") throw new Error("Brief freshness could not be verified. Check inventory-agent-integration.sql.");
+      return data;
+    },
+    load: async (fingerprint) => (await loadCachedBrief(date, fingerprint)).brief,
+    generate: () => generateDailyBrief(date),
+    save: (brief, fingerprint) => saveBrief(date, brief, fingerprint),
+  }).then(brief => ({ ...brief, briefDate: date }));
 }
 
-async function saveBrief(date: string, brief: DailyBrief): Promise<DailyBrief & { briefDate: string }> {
+async function saveBrief(date: string, brief: DailyBrief, fingerprint: string): Promise<DailyBrief & { briefDate: string }> {
   try {
     const { error } = await inventoryClient()
       .from("daily_briefs")
@@ -809,6 +812,7 @@ async function saveBrief(date: string, brief: DailyBrief): Promise<DailyBrief & 
         all_clear: brief.all_clear,
         details: {
           schemaVersion: CACHE_SCHEMA_VERSION,
+          sourceFingerprint: fingerprint,
           traffic: brief.traffic,
           stock_items: brief.stock_items,
           data_warnings: brief.data_warnings,

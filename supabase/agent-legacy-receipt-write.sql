@@ -1,10 +1,5 @@
--- Run after agent-existing-schema-setup.sql, agent-write-tools.sql,
--- and agent-first-app.sql.
--- Replaces the generic receipt writer with one compatible with the existing
--- delivery_receipts ledger, whose required fields include stock and movement
--- snapshots.
+-- Canonical receipt adapter: incoming quantity is the original ordered amount.
 begin;
-
 create or replace function public.record_agent_delivery_receipt(
   p_activity_id bigint,
   p_delivery_id bigint,
@@ -47,7 +42,13 @@ begin
   select stock_after into v_existing_stock
     from public.delivery_receipts
     where agent_activity_id = p_activity_id;
-  if found then return v_existing_stock; end if;
+  if found then
+    if not exists(select 1 from public.delivery_receipts where agent_activity_id = p_activity_id
+      and delivery_id = p_delivery_id and amount = p_received_quantity and note = trim(p_note)) then
+      raise exception 'RECEIPT_REQUEST_CONFLICT';
+    end if;
+    return v_existing_stock;
+  end if;
 
   select
       delivery.ingredient_id,
@@ -71,8 +72,11 @@ begin
     where delivery.delivery_id = p_delivery_id
     for update of delivery, inventory;
   if not found then raise exception 'NO_INCOMING_DELIVERY_OR_STOCK'; end if;
-  if v_ordered_quantity is null or v_ordered_quantity < 0 then
+  if v_ordered_quantity is null or v_ordered_quantity < 0 or v_ordered_quantity::text in ('NaN','Infinity','-Infinity') then
     raise exception 'INVALID_ORDERED_QUANTITY';
+  end if;
+  if exists(select 1 from public.incoming_deliveries where delivery_id = p_delivery_id and stock_unit is distinct from v_unit) then
+    raise exception 'ORDER_UNIT_MISMATCH';
   end if;
   if v_last_updated is distinct from p_expected_updated then
     raise exception 'STALE_STOCK';

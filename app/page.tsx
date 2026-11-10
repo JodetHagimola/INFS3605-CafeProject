@@ -1,3 +1,5 @@
+import { RecordedOperations } from "./recorded-operations";
+import { hasAgentSession } from "@/lib/agent/auth";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { isValidISODate } from "@/lib/agent/date";
@@ -23,6 +25,7 @@ export default async function TodayPage({
   searchParams: Promise<{ date?: string | string[] }>;
 }) {
   await connection();
+  if (!(await hasAgentSession())) return null;
   const query = await searchParams;
   const date = typeof query.date === "string" ? query.date : undefined;
   const today = cafeLocalDate();
@@ -141,6 +144,7 @@ export default async function TodayPage({
           </>
         )}
       </section>
+      <RecordedOperations date={activeDate} />
     </main>
   );
 }
