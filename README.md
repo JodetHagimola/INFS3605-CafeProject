@@ -19,6 +19,10 @@ recipes, sales aggregates, supplier data, and deliveries. Gemini generates
 indicative drink-demand estimates from the sales summary; TypeScript validates
 the estimates and computes ingredient requirements, shortfalls, and totals.
 Forecasts may use synthetic sales history and are not purchasing guarantees.
+The chat dock also supports optional voice chat in browsers with Web Speech API
+support. Select **Enable voice** to grant microphone access, then say “Brewly”
+to hear the greeting and ask a question aloud. Voice listening can be turned
+off at any time and is not started until enabled.
 
 The agent can save draft orders and record explicitly owner-reported wastage or
 deliveries. Tool calls and outcomes are recorded in `agent_activity`. Purchases, supplier contact or switches, and price changes create approval
@@ -75,3 +79,13 @@ including `ML/api.py`, `ML/data/`, the synthetic CSV, `ML/forecast_model.joblib`
 and `ML/agent_forecast_table.json`. `app/api/recommendations/route.ts` is also
 an older recommendation route. They are intentionally retained pending review;
 the Gemini agent does not call the Python service.
+
+### Inventory operations integration
+
+The sales and delivery pages now share the signed workspace session and agent
+stock data. See [INTEGRATION_SETUP.md](INTEGRATION_SETUP.md) before installing
+`supabase/inventory-agent-integration.sql` on an existing database. The migration
+unifies original ordered quantity and receipt-derived outstanding balances;
+it does not reset inventory. Today includes recorded daily operations, and the
+chat tool `get_recorded_operations` reads the same data. Validation and limits
+are recorded in [INTEGRATION_TEST_RESULTS.md](INTEGRATION_TEST_RESULTS.md).

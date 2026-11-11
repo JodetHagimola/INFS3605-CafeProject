@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasAgentSession } from "@/lib/agent/auth";
-import { decideApproval, editApproval, getApprovalInbox } from "@/lib/agent/approval";
+import {
+  createRestockApproval,
+  decideApproval,
+  editApproval,
+  getApprovalInbox,
+  RestockApprovalConflictError,
+  RestockApprovalValidationError,
+} from "@/lib/agent/approval";
 import { getAgentActivity } from "@/lib/agent/activity-log";
 import { approvalDetailsSchema } from "@/lib/agent/approval-schema";
+import { isValidISODate } from "@/lib/agent/date";
+import { getDailyBrief } from "@/lib/agent/daily-brief";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const requestSchema = z.discriminatedUnion("operation", [
   z.object({
@@ -16,6 +26,12 @@ const requestSchema = z.discriminatedUnion("operation", [
     id: z.string().uuid(),
     summary: z.string().trim().min(1).max(500),
     details: approvalDetailsSchema,
+  }).strict(),
+  z.object({
+    operation: z.literal("approve-restock"),
+    actionId: z.string().uuid(),
+    date: z.string().refine(isValidISODate),
+    quantity: z.number().int().positive().max(100_000),
   }).strict(),
   z.object({
     operation: z.literal("decide"),
@@ -57,6 +73,50 @@ export async function POST(request: Request) {
       return result === "updated"
         ? NextResponse.json({ status: "updated" })
         : NextResponse.json({ error: "This item is no longer pending approval." }, { status: 409 });
+    }
+    if (parsed.data.operation === "approve-restock") {
+      const restockRequest = parsed.data;
+      try {
+        const brief = await getDailyBrief({ date: restockRequest.date });
+        const item = brief.stock_items.find((stockItem) => stockItem.approve_action_id === restockRequest.actionId);
+        if (!item) {
+          return NextResponse.json({ error: "This restock suggestion is no longer available. Refresh today's brief." }, { status: 409 });
+        }
+        if (!item.suggested_order.supplier || item.suggested_order.quantity === null) {
+          return NextResponse.json({ error: "This restock cannot be approved until its quantity and supplier are verified." }, { status: 409 });
+        }
+
+        const result = await createRestockApproval({
+          actionId: restockRequest.actionId,
+          briefDate: restockRequest.date,
+          ingredientId: item.ingredient_id,
+          ingredient: item.name,
+          quantity: restockRequest.quantity,
+          unit: item.suggested_order.unit,
+          supplier: item.suggested_order.supplier,
+          reason: item.why,
+        });
+        return NextResponse.json({
+          status: "approved",
+          estimatedCost: result.estimatedCost,
+          alreadyApproved: result.alreadyApproved,
+          note: "Approval recorded. No order was placed and no supplier was contacted.",
+        });
+      } catch (error) {
+        console.error("Could not verify or record Today's Brief restock approval:", error);
+        const message = error instanceof RestockApprovalValidationError
+          || error instanceof RestockApprovalConflictError
+          ? error.message
+          : error instanceof Error && error.message.startsWith("Today's brief")
+            ? error.message
+            : "Today's brief could not be verified; no approval was recorded.";
+        const status = error instanceof RestockApprovalValidationError
+          ? 400
+          : error instanceof RestockApprovalConflictError
+            ? 409
+            : 500;
+        return NextResponse.json({ error: message }, { status });
+      }
     }
 
     const result = await decideApproval({

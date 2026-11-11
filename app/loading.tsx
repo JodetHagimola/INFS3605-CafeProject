@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { Skeleton } from "./ui/feedback";
 
 const briefStages = [
-  "Checking stock...",
-  "Looking at deliveries...",
-  "Forecasting demand...",
+  "Checking café data...",
+  "Looking at recent sales...",
+  "Preparing your brief...",
 ];
 
 export default function Loading() {

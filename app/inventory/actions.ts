@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { hasAgentSession } from "@/lib/agent/auth";
 import { inventoryClient } from "@/lib/inventory/server";
 import { movementAmount } from "@/lib/inventory/model";
 
@@ -8,9 +9,8 @@ export type MovementState = { status: "idle" | "success" | "error"; message: str
 
 export async function recordMovement(_previous: MovementState, form: FormData): Promise<MovementState> {
   const fail = (message: string): MovementState => ({ status: "error", message });
-  // This starter project has no staff login. Writes are limited to the private
-  // development demo. Add staff authorization before enabling production writes.
-  if (process.env.NODE_ENV !== "development") return fail("Stock updates are available in the private development demo only.");
+  // Every mutation verifies the existing signed workspace session.
+  if (!(await hasAgentSession())) return fail("Please sign in before updating inventory.");
   const id = String(form.get("id") ?? "");
   const kind = String(form.get("kind") ?? "");
   const amount = movementAmount(form.get("amount"));
@@ -34,6 +34,6 @@ export async function recordMovement(_previous: MovementState, form: FormData): 
   } catch {
     return fail("The update could not be confirmed. Refresh and check the stock before retrying.");
   }
-  revalidatePath("/inventory");
+  try { revalidatePath("/"); revalidatePath("/inventory"); } catch { /* Stock was committed. */ }
   return { status: "success", message: "Stock updated. The movement and reason have been recorded." };
 }

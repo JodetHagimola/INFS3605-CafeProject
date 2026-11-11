@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasAgentSession } from "@/lib/agent/auth";
+import { isValidISODate } from "@/lib/agent/date";
 import { getDailyBrief } from "@/lib/agent/daily-brief";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
-  const parsedDate = new Date(`${value}T00:00:00.000Z`);
-  return parsedDate.toISOString().slice(0, 10) === value;
-}, { message: "The brief date is invalid." });
+const dateSchema = z.string().refine(isValidISODate, { message: "The brief date is invalid." });
 
 const requestSchema = z.object({
   refresh: z.boolean().optional(),
@@ -38,7 +36,7 @@ export async function POST(request: Request) {
       date: parsed.data.date,
     }));
   } catch (error) {
-    console.error("Could not prepare today's brief:", error instanceof Error ? error.name : "Unknown error");
+    console.error("Could not prepare today's brief:", error);
     const message = error instanceof Error
       && (error.message === "The requested brief date is invalid."
         || error.message === "The Gemini API key is not configured on the server."

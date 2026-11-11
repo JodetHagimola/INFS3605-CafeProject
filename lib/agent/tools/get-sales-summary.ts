@@ -1,3 +1,4 @@
+import { sydneyDay } from "@/lib/inventory-sales/operations-model";
 import { tool } from "ai";
 import { z } from "zod";
 import { buildSalesSummary, salesRowsFromDatabase } from "./sales-summary-model";
@@ -9,7 +10,7 @@ export async function loadSalesSummary() {
     "sales_history",
     "sales_date,product_name,units_sold,is_public_holiday,source",
   );
-  const today = new Date().toISOString().slice(0, 10);
+  const today = sydneyDay(new Date().toISOString());
   const history = salesRowsFromDatabase(rows).filter((row) => row.salesDate <= today);
   return buildSalesSummary(history);
 }
