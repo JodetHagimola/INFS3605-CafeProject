@@ -4,6 +4,16 @@
   padding: 48px 0 88px;
 }
 
+.welcome {
+  margin: 0 0 16px;
+  color: var(--coffee);
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
 .brief > h1 {
   margin: 0;
   color: var(--coffee);
@@ -20,6 +30,111 @@
   align-items: end;
   gap: 20px;
   margin-top: 16px;
+}
+
+.forecast {
+  margin-top: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  padding: clamp(18px, 4vw, 24px);
+}
+
+.forecastHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.forecastHeading .eyebrow {
+  margin: 0 0 4px;
+}
+
+.forecastHeading h2 {
+  margin: 0;
+  color: var(--coffee);
+  font-family: var(--font-serif);
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.forecastHeading > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.forecastHeading > p strong {
+  display: block;
+  color: var(--coffee);
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.forecastCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.forecastCard {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  padding: 13px;
+}
+
+.cupIcon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green-pale);
+  color: var(--green);
+}
+
+.cupIcon svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.forecastCard > strong {
+  color: var(--coffee);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.forecastCard > span:last-child {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.forecastCard > span:last-child b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.forecastNote {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .date {
@@ -99,6 +214,29 @@
   font-size: 23px;
   font-weight: 500;
   line-height: 1.25;
+}
+
+.itemHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.itemHeading h2 {
+  font-weight: 700;
+}
+
+.attentionIcon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--rust-pale);
+  color: var(--rust-deep);
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .item > p,
@@ -211,6 +349,21 @@
 @media (max-width: 600px) {
   .brief {
     padding-top: 30px;
+  }
+
+  .forecastHeading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .forecastHeading > p {
+    text-align: left;
+  }
+
+  .forecastHeading > p strong {
+    display: inline;
+    margin-right: 4px;
   }
 
   .briefHeading {

@@ -17,6 +17,16 @@ function validDate(value: string | undefined): string | null {
   return parsed.toISOString().slice(0, 10) === value ? value : null;
 }
 
+function ownerGreeting(): string {
+  const hour = Number(new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Sydney",
+    hour: "numeric",
+    hourCycle: "h23",
+  }).format(new Date()));
+  const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+  return `Good ${timeOfDay}, Margaret`;
+}
+
 export default async function TodayPage({
   searchParams,
 }: {
@@ -35,11 +45,14 @@ export default async function TodayPage({
       ? briefError.message
       : "Today's brief could not be prepared. Please try again later.";
   }
+  const expectedDrinks = brief?.details.forecasts.filter((forecast) => forecast.date === activeDate) ?? [];
+  const totalExpectedDrinks = expectedDrinks.reduce((total, forecast) => total + forecast.expected, 0);
 
   return (
     <main className="page-shell">
       <SiteNav current="today" />
       <section className={styles.brief} aria-labelledby="today-title">
+        <p className={styles.welcome}>{ownerGreeting()}</p>
         <p className="eyebrow">DAILY BRIEF</p>
         <h1 id="today-title">Today</h1>
         <div className={styles.briefHeading}>
@@ -52,6 +65,32 @@ export default async function TodayPage({
             <RefreshBriefButton date={activeDate} />
           </div>
         </div>
+        {expectedDrinks.length > 0 && (
+          <section className={styles.forecast} aria-labelledby="forecast-title">
+            <header className={styles.forecastHeading}>
+              <div>
+                <p className="eyebrow">TODAY'S ESTIMATE</p>
+                <h2 id="forecast-title">Drinks expected to sell</h2>
+              </div>
+              <p><strong>{totalExpectedDrinks.toLocaleString("en-AU")}</strong> drinks total</p>
+            </header>
+            <div className={styles.forecastCards}>
+              {expectedDrinks.map((forecast, index) => (
+                <article className={styles.forecastCard} key={`${forecast.product}-${index}`}>
+                  <span className={styles.cupIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z" />
+                      <path d="M17 10h1.5a2.5 2.5 0 1 1 0 5H17M7 4v2m4-2v2m4-2v2" />
+                    </svg>
+                  </span>
+                  <strong>{forecast.expected.toLocaleString("en-AU")}</strong>
+                  <span><b>{forecast.product}</b> expected</span>
+                </article>
+              ))}
+            </div>
+            <p className={styles.forecastNote}>Forecasts are estimates based on available sales history.</p>
+          </section>
+        )}
         {error ? (
           <section className={styles.emptyState} role="status">
             <h2>I couldn't prepare today's brief.</h2>
@@ -61,14 +100,17 @@ export default async function TodayPage({
         ) : brief && (
           <>
             <section className={styles.intro}>
-              <p>{brief.greeting}</p>
+              <p>Today's outlook</p>
               <h2>{brief.statusLine}</h2>
             </section>
             {brief.items.length > 0 ? (
               <div className={styles.items}>
                 {brief.items.map((item) => (
                   <article className={styles.item} data-brief-action-card key={item.id}>
-                    <h2>{item.title}</h2>
+                    <div className={styles.itemHeading}>
+                      <span className={styles.attentionIcon} aria-hidden="true">!</span>
+                      <h2>{item.title}</h2>
+                    </div>
                     <p>{item.why}</p>
                     <p className={styles.actionTaken}>{item.actionTaken}</p>
                     <BriefItemActions item={item} date={brief.briefDate} />

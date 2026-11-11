@@ -151,6 +151,16 @@ export function InboxPanel() {
 
   const pending = items.filter((item) => item.status === "pending_approval");
   const reviewed = items.filter((item) => item.status !== "pending_approval");
+  const attentionHeading = busy && flags.length === 0
+    ? "Checking for items needing attention"
+    : flags.length === 0
+      ? "All clear"
+      : `${flags.length} item${flags.length === 1 ? "" : "s"} ${flags.length === 1 ? "needs" : "need"} attention`;
+  const attentionStateClass = flags.length > 0
+    ? styles.attentionHasFlags
+    : busy
+      ? styles.attentionLoading
+      : styles.attentionClear;
 
   return (
     <div className={styles.panel} aria-busy={busy}>
@@ -159,7 +169,7 @@ export function InboxPanel() {
       </LoadingButton>
       {error && <p className="form-message error" role="alert">{error}</p>}
 
-      <h2>Items needing attention <span>{flags.length}</span></h2>
+      <h2 className={`${styles.attentionHeading} ${attentionStateClass}`}>{attentionHeading}</h2>
       {busy && flags.length === 0 ? (
         <div className={styles.list} role="status" aria-live="polite">
           <span className="sr-only">Loading items needing attention...</span>
@@ -177,7 +187,7 @@ export function InboxPanel() {
               </div>
               <span className={styles.status}>{flag.outcome}</span>
             </header>
-            <p>{flag.reason}</p>
+            <p className={styles.flagReason}>{flag.reason}</p>
           </article>)}
         </div>
       )}
