@@ -155,4 +155,12 @@ await db.exec(migration);
 pass('migration refuses missing original quantities with existing receipts, without guessing or changing stock');
 
 console.log(`${checks} database scenario groups passed. PGlite uses one connection; independent-session lock races are not covered.`);
+if (process.argv.includes('--operations') || process.argv.includes('--autonomy')) {
+  const { verifyCafeOperations } = await import('./verify-cafe-operations.mjs');
+  await verifyCafeOperations(db);
+}
+if (process.argv.includes('--autonomy')) {
+  const { verifyAutonomy } = await import('./verify-cafe-autonomy.mjs');
+  await verifyAutonomy(db);
+}
 if (!process.argv.includes('--serve')) await db.close();

@@ -11,6 +11,7 @@ import type { DraftOrderRecord } from "@/lib/agent/draft-schema";
 import { createRequestHumanApprovalTool } from "./request-human-approval";
 import { logWastageTool } from "./log-wastage";
 import { recordDeliveryTool } from "./record-delivery";
+import { drinkCapacityTool, supplierDraftsTool } from "./cafe-operations";
 import { recordedOperationsTool } from "./recorded-operations";
 
 export function createAgentTools(defaults: {
@@ -28,6 +29,8 @@ export function createAgentTools(defaults: {
   }, () => draft !== null);
   const tools = {
     get_inventory: getInventoryTool,
+    get_drink_capacity: drinkCapacityTool,
+    get_supplier_drafts: supplierDraftsTool,
     get_recorded_operations: recordedOperationsTool,
     get_recipes: getRecipesTool,
     get_sales_summary: createGetSalesSummaryTool(() => {

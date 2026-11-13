@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { hasAgentSession } from "@/lib/agent/auth";
 import { inventoryClient } from "@/lib/inventory/server";
+import { tailorSupplierDraft } from "@/lib/inventory-deliveries/followups";
 import { movementAmount } from "@/lib/inventory/model";
 
 export type DeliveryState = { status: "idle" | "success" | "error"; message: string };
@@ -33,6 +34,8 @@ export async function registerDelivery(_previous: DeliveryState, form: FormData)
 }
 export async function receiveDelivery(_previous: DeliveryState, form: FormData): Promise<DeliveryState> {
   if (!(await hasAgentSession())) return fail("Please sign in before updating deliveries.");
+  const arrival = form.get("arrival");
+  if (arrival !== "partial" && arrival !== "final") return fail("Choose whether more is coming or this is the final delivery.");
   const request = String(form.get("request") ?? "");
   const delivery = String(form.get("delivery") ?? "");
   const amount = movementAmount(form.get("amount"));
@@ -41,14 +44,22 @@ export async function receiveDelivery(_previous: DeliveryState, form: FormData):
   if (!uuid.test(request) || !/^\d{1,18}$/.test(delivery) || amount === null || movementAmount(expected) === null || !note || note.length > 120 || form.get("received") !== "yes")
     return fail("Enter the actual received quantity and a delivery note, and confirm the goods have arrived.");
   try {
-    const { data, error } = await inventoryClient().rpc("receive_inventory_delivery", {
+    const { data, error } = await inventoryClient().rpc("receive_classified_delivery", {
+      p_final: arrival === "final",
       p_request_id: request, p_delivery_id: delivery, p_amount: String(form.get("amount")), p_expected_remaining: expected, p_note: note,
     });
     if (error) {
+      if (error.message.includes("DELIVERY_CLOSED_SHORT")) return fail("This delivery was already closed with a shortage. Check the saved supplier draft.");
       if (error.message.includes("DELIVERY_CHANGED")) return fail("This delivery changed or was already received. Refresh and check the receipt history before entering anything else.");
       if (error.message.includes("EXCEEDS_OUTSTANDING")) return fail("Received quantity exceeds the amount still expected. Check the quantity and unit.");
       if (error.message.includes("RECEIPT_REQUEST_CONFLICT")) return fail("This receipt reference was used with different details. Refresh and check receipt history.");
       return fail("Receipt was not confirmed. Keep these details and retry, or check receipt history. Confirm the SQL setup and stock records.");
+    }
+    if (data.closed_short) {
+      // The receipt and the standard draft have already committed together.
+      try { await tailorSupplierDraft(request); } catch { /* Keep the standard draft available for review. */ }
+      refresh();
+      return { status: "success", message: `Final receipt saved. Stock at receipt: ${data.after} ${data.unit}. Short by ${data.remaining} ${data.unit}. Review the supplier email below.` };
     }
     refresh();
     return { status: "success", message: `${data.replayed ? "Already recorded" : "Receipt recorded"}: ${data.amount} ${data.unit} ${data.name}. Stock at receipt: ${data.before} → ${data.after} ${data.unit}. Still expected: ${data.remaining} ${data.unit}.` };

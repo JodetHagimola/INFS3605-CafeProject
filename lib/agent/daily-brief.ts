@@ -583,7 +583,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     read("ingredient details", () => readRows(db!, "ingredients", "ingredient_id,ingredient_name,unit", ["ingredient_id"])),
     read("inventory", () => readRows(db!, "inventory", "ingredient_id,quantity_in_stock,minimum_stock,last_updated", ["ingredient_id"])),
     read("recipes", () => readRows(db!, "recipes", "product_name,ingredient_id,quantity_required", ["product_name", "ingredient_id"])),
-    read("incoming deliveries", () => readRows(db!, "incoming_deliveries", "delivery_id,ingredient_id,quantity,expected_date", ["delivery_id"])),
+    read("incoming deliveries", () => readRows(db!, "open_incoming_deliveries", "delivery_id,ingredient_id,quantity,expected_date", ["delivery_id"])),
     read("delivery receipts", () => readRows(db!, "delivery_receipts", "delivery_id,received_quantity,received_at", ["delivery_id"])),
     read("supplier prices", () => readRows(db!, "supplier_prices", "supplier,ingredient_id,price,delivery_time,minimum_order", ["ingredient_id", "price"])),
     read("standing rules", () => readRows(db!, "standing_rules", "id,name,enabled,ingredient_ids,supplier,maximum_total", ["id"])),

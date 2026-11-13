@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getDeliveryData } from "@/lib/inventory-deliveries/server";
+import { SensorForm } from "../../automation/forms";
+import { SupplierDrafts } from "./supplier-drafts";
 import { ReceiveForm, RegisterForm } from "./forms";
 import styles from "./page.module.css";
 export const metadata: Metadata = { title: "Receive deliveries | Brewlytics" };
@@ -22,6 +24,7 @@ export default async function DeliveriesPage() {
       {!canWrite && <p className="notice">Sign in to confirm a receipt.</p>}
     </section>
     {result.error ? <p role="alert" className="notice">{result.error}</p> : <>
+      <SensorForm deliveries={result.deliveries} />
       <section className={styles.section} aria-labelledby="pending"><h2 id="pending">Expected deliveries <span className={styles.count}>{result.deliveries.length}</span></h2>
         <p className={styles.muted}>Partial deliveries stay here until the remaining quantity arrives. Refresh after a receipt to see the latest balance.</p>
         {!result.deliveries.length && <p className={styles.empty}>No outstanding deliveries. Register a placed order below.</p>}
@@ -29,7 +32,7 @@ export default async function DeliveriesPage() {
           <p className={styles.kicker}>DELIVERY #{item.id}{item.demo ? " · DEMO DATA" : ""}</p><h3>{item.name}</h3>
           <p className={styles.quantity}>{item.outstanding} <span>{item.unit} still expected</span></p>
           <dl><dt>Ordered</dt><dd>{item.ordered} {item.unit}</dd><dt>Expected</dt><dd>{item.expected}</dd><dt>Supplier</dt><dd>{item.supplier}</dd><dt>Reference</dt><dd>{item.reference}</dd></dl>
-          {item.demo && <p className={styles.muted}>Illustrative delivery from the earlier demo setup.</p>}
+          {item.demo && <p className={styles.muted}>Test delivery.</p>}
           <ReceiveForm id={item.id} remaining={item.outstanding} unit={item.unit} requestId={randomUUID()} canWrite={canWrite} />
         </article>)}</div>
       </section>
@@ -42,8 +45,9 @@ export default async function DeliveriesPage() {
           <RegisterForm draftId={order.id} canWrite={canWrite} />
         </details>)}
       </section>
+      <SupplierDrafts />
       <section className={styles.section} aria-labelledby="history"><h2 id="history">Recent receipts</h2><p className={styles.muted}>Latest 20 receipts. Stock balances are snapshots at receipt time. Times shown in UTC.</p>
-        {!result.receipts.length ? <p className={styles.empty}>No receipts recorded yet.</p> : <div className="table-wrap"><table><thead><tr><th>Receipt</th><th>Ingredient</th><th>Received</th><th>Stock after</th><th>Still expected</th><th>Recorded (UTC)</th></tr></thead><tbody>
+        {!result.receipts.length ? <p className={styles.empty}>No receipts recorded yet.</p> : <div className="table-wrap"><table><thead><tr><th>Receipt</th><th>Ingredient</th><th>Received</th><th>Stock after</th><th>Unreceived at receipt</th><th>Recorded (UTC)</th></tr></thead><tbody>
           {result.receipts.map(row => <tr key={row.id}><td><code title={row.id}>{row.id.slice(0, 8)}</code></td><td>{row.name}</td><td>+{row.amount} {row.unit}</td><td>{row.after} {row.unit}</td><td>{row.remaining} {row.unit}</td><td>{new Date(row.created).toISOString().replace("T", " ").slice(0, 19)}</td></tr>)}
         </tbody></table></div>}
       </section><p><a href="/inventory">View updated inventory →</a></p>

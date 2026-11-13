@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { simulateScan } from '../lib/automation/sensor.ts';
+
+export async function verifyAutonomy(db) {
+  const sql = await readFile(new URL('../supabase/cafe-autonomy.sql', import.meta.url), 'utf8');
+  await db.exec(sql);
+  const row = async (q, args=[]) => (await db.query(q, args)).rows[0];
+  await db.exec(`insert into ingredients values(101,'Test Milk','ml'),(102,'Test Beans','g'),(103,'Cups','pcs');
+    insert into inventory(ingredient_id,quantity_in_stock,last_updated) values(101,5000,now()),(102,3000,now()),(103,20,now());
+    insert into supplier_prices values('Demo',101,16,1,1),('Demo',102,34,1,1),('Demo',103,16,1,1);
+    insert into recipes values('Demo Drink',101,160),('Demo Drink',102,18);
+    set role service_role;`);
+  const config = (id, cutoff, min) => row("select configure_cafe_reorder($1,'Demo',2,$2,100,true,$3)",[id,cutoff,min]);
+  await config(101,50,4900); await config(102,50,3000); await config(103,50,20);
+  const sale = randomUUID();
+  await row("select record_inventory_sale($1,'Demo Drink',1)", [sale]);
+  await row("select record_inventory_sale($1,'Demo Drink',1)", [sale]);
+  const order = id => row("select * from cafe_sim_orders where ingredient_id=$1 order by created_at desc limit 1",[id]);
+  const stock = async id => Number((await row("select quantity_in_stock from inventory where ingredient_id=$1",[id])).quantity_in_stock);
+  const milk = await order(101), beans = await order(102);
+  assert.equal(milk.status,'submitted'); assert.equal(Number(milk.total),32); assert.ok(milk.delivery_id);
+  assert.equal(await stock(101),4840); assert.equal(beans.status,'pending'); assert.equal(Number(beans.total),68); assert.equal(beans.delivery_id,null);
+  await row("select review_cafe_sim_order($1,true)",[beans.id]);
+  await row("select review_cafe_sim_order($1,true)",[beans.id]);
+  const approved = await order(102); assert.ok(approved.delivery_id);
+  const use = id => row("select record_inventory_movement($1,'usage',1,(select last_updated from inventory where ingredient_id=$1),'Test')",[id]);
+  await use(101);
+  assert.equal((await row('select count(*)::int n from cafe_sim_orders')).n,2);
+  await use(103); const cups=await order(103);
+  assert.match(cups.reason,/daily budget/);
+  await row('select review_cafe_sim_order($1,false)',[cups.id]); assert.equal((await order(103)).status,'rejected');
+  await config(103,32,20); await use(103); assert.match((await order(103)).reason,/per-order limit/);
+  console.log('PASS sale triggers $32 order, $68 approval, duplicate sale, incoming coverage, daily budget, exact cap and rejection');
+  const scan = async (id, balance, scenario, unit='ml') => {
+    const input = simulateScan(String(id),String(balance),unit,scenario);
+    const call = () => row("select apply_sensor_reading($1,$2,$3,$4,$5,$6) result",Object.values(input));
+    return {input, call, result: (await call()).result};
+  };
+  const part = await scan(milk.delivery_id,2000,'partial');
+  assert.equal(part.result.outcome,'partial'); assert.equal((await part.call()).result.replayed,true);
+  assert.equal((await row('select count(*)::int n from cafe_test_mail')).n,0);
+  await assert.rejects(scan(milk.delivery_id,2000,'final_short'),/DELIVERY_CHANGED/);
+  await assert.rejects(scan(milk.delivery_id,400,'final_short','g'),/UNIT_MISMATCH/);
+  const short = await scan(milk.delivery_id,400,'final_short');
+  assert.equal(short.result.outcome,'short'); assert.equal((await short.call()).result.replayed,true);
+  assert.equal(await stock(101),6759);
+  const job=await row('select * from cafe_test_mail where event_id=$1',[short.input.p_event]);
+  assert.equal(Number(job.facts.received),1920); assert.equal(Number(job.facts.difference),80);
+  assert.equal(job.facts.reference,'SIM-'+milk.id);
+  const extra=await scan(approved.delivery_id,2000,'extra','g');
+  assert.equal(extra.result.outcome,'extra'); assert.equal((await extra.call()).result.replayed,true);
+  assert.equal(await stock(102),5382);
+  const extraJob=await row('select * from cafe_test_mail where event_id=$1',[extra.input.p_event]);
+  assert.equal(Number(extraJob.facts.difference),400);
+  const freeze = text => row("select prepare_cafe_test_mail($1,'inbox',$2) m",[extra.input.p_event,JSON.stringify({text})]);
+  await freeze('saved body'); assert.equal((await freeze('different')).m.payload.text,'saved body');
+  const full = await row("insert into incoming_deliveries(ingredient_id,quantity,ordered_quantity,stock_unit,expected_date) values(101,100,100,'ml',current_date) returning delivery_id");
+  assert.equal((await scan(full.delivery_id,100,'full')).result.outcome,'complete');
+  assert.equal((await row('select count(*)::int n from cafe_test_mail')).n,2);
+  await db.exec('reset role'); await db.exec(sql);
+  for(const role of ['anon','authenticated']) {
+    await db.exec('set role '+role);
+    await assert.rejects(db.query('select * from cafe_test_mail'),/permission denied/);
+    await assert.rejects(part.call(),/permission denied/);
+    await db.exec('reset role');
+  }
+  console.log('PASS full, partial, final short, excess, shared stock, stale reading, units, idempotent receipts and email, migration and access');
+}
