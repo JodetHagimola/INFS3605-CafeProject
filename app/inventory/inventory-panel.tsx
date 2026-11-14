@@ -63,6 +63,20 @@ export default function InventoryPanel({ items, canWrite }: { items: InventoryIt
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
+  useEffect(() => {
+    if (selected || refreshing) return;
+    function refresh() {
+      if (document.visibilityState === "visible") startRefresh(() => router.refresh());
+    }
+    const timer = window.setInterval(refresh, 5000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [selected, refreshing, router]);
   const low = items.filter(item => item.status === "Low stock").length;
   const empty = items.filter(item => item.status === "Out of stock").length;
   const visible = items.filter(item => item.name.toLowerCase().includes(query.trim().toLowerCase()) &&
@@ -95,7 +109,7 @@ export default function InventoryPanel({ items, canWrite }: { items: InventoryIt
     <p aria-live="polite">Showing {visible.length} of {items.length} ingredients</p>
     {visible.length === 0 ? <div className="empty-state">{items.length === 0 ? "No ingredients have been added yet." : "No ingredients match these filters."}</div> :
       <div className="table-wrap"><table>
-        <caption className={styles.caption}>Recorded stock. Updated times use Sydney time.</caption>
+        <caption className={styles.caption}>Stock refreshes every 5 seconds while visible and pauses while editing. Times use Sydney time.</caption>
         <thead><tr><th scope="col">Ingredient</th><th scope="col">Stock</th><th scope="col">Minimum</th><th scope="col">Status</th><th scope="col">Updated</th><th scope="col">Action</th></tr></thead>
         <tbody>{visible.map(item => <tr key={item.id}>
           <th scope="row">{item.name}</th>

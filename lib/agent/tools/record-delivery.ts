@@ -27,8 +27,8 @@ export const recordDeliveryTool = tool({
 
     if (input.deliveryId) {
       const { data, error } = await db
-        .from("incoming_deliveries")
-        .select("delivery_id,ingredient_id,quantity")
+        .from("agent_delivery_status")
+        .select("delivery_id,ingredient_id,quantity,closed_short")
         .eq("delivery_id", input.deliveryId)
         .maybeSingle();
       if (error) {
@@ -36,6 +36,7 @@ export const recordDeliveryTool = tool({
         throw new Error("The incoming delivery could not be verified.");
       }
       if (!data) throw new Error("No matching incoming delivery exists.");
+      if (data.closed_short) throw new Error("This order was closed short. Review its supplier draft before recording a new delivery.");
       delivery = data;
       const { data: ingredientRow, error: ingredientError } = await db
         .from("ingredients")
@@ -71,8 +72,8 @@ export const recordDeliveryTool = tool({
     if (!ingredient) throw new Error("The delivery ingredient could not be verified.");
     if (!deliveryId) {
       const { data: candidates, error: candidateError } = await db
-        .from("incoming_deliveries")
-        .select("delivery_id,ingredient_id,quantity")
+        .from("agent_delivery_status")
+        .select("delivery_id,ingredient_id,quantity,closed_short")
         .eq("ingredient_id", String(ingredient.ingredient_id));
       if (candidateError) {
         console.error("Could not check for a matching incoming delivery:", candidateError.message);
@@ -97,9 +98,12 @@ export const recordDeliveryTool = tool({
               + nonnegativeNumber(receipt.received_quantity, "Received quantity"),
           );
         }
-        const outstanding = (candidates ?? []).filter((candidate) =>
+        const outstanding = (candidates ?? []).filter((candidate) => !candidate.closed_short &&
           (receivedByDelivery.get(String(candidate.delivery_id)) ?? 0)
             < nonnegativeNumber(candidate.quantity, "Ordered delivery quantity"));
+        if (!outstanding.length && candidates?.some(candidate => candidate.closed_short)) {
+          throw new Error("An earlier order was closed short. Confirm a new order ID, or record a separate unplanned arrival on Inventory.");
+        }
         if (outstanding.length > 1) {
           throw new Error("More than one incoming delivery matches this ingredient. Specify the delivery ID before recording it.");
         }

@@ -19,7 +19,7 @@ export async function getDeliveryData(): Promise<{ deliveries: Delivery[]; order
       }
     }
     const [deliveries, ingredients, batches, drafts, recent] = await Promise.all([
-      all("inventory_delivery_balances", "delivery_id,ingredient_id,quantity,ordered_quantity,expected_date,supplier_name,batch_id,demo_key,outstanding_quantity", "delivery_id"),
+      all("open_delivery_balances", "delivery_id,ingredient_id,quantity,ordered_quantity,expected_date,supplier_name,batch_id,demo_key,outstanding_quantity", "delivery_id"),
       all("ingredients", "ingredient_id,ingredient_name,unit", "ingredient_id"),
       all("delivery_batches", "id,draft_id,supplier_reference", "id"),
       all("draft_orders", "id,status,lines,created_at", "id"),
@@ -36,7 +36,7 @@ export async function getDeliveryData(): Promise<{ deliveries: Delivery[]; order
         return { id: String(row.delivery_id), name: String(ingredient.ingredient_name), unit: String(ingredient.unit),
           outstanding: String(row.outstanding_quantity), ordered: String(row.quantity), expected: String(row.expected_date).slice(0, 10),
           supplier: typeof row.supplier_name === "string" ? row.supplier_name : "Not recorded",
-          reference: String(batchMap.get(String(row.batch_id))?.supplier_reference ?? "Existing incoming delivery"), demo: !!row.demo_key };
+          reference: String(batchMap.get(String(row.batch_id))?.supplier_reference ?? (String(row.demo_key).startsWith("SIM-") ? row.demo_key : "Existing incoming delivery")), demo: !!row.demo_key };
       }).sort((a, b) => a.expected.localeCompare(b.expected) || a.id.localeCompare(b.id)),
       orders: drafts.filter(row => row.status === "approved" && !registered.has(String(row.id))).map(row => ({
         id: String(row.id), created: String(row.created_at),

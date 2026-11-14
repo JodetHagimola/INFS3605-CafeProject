@@ -9,6 +9,8 @@ const ORDER_COLUMNS: Record<string, string[]> = {
   recipes: ["product_name", "ingredient_id"],
   sales_history: ["sales_date", "product_name"],
   incoming_deliveries: ["delivery_id"],
+  open_incoming_deliveries: ["delivery_id"],
+  agent_delivery_status: ["delivery_id"],
   delivery_receipts: ["id"],
   supplier_prices: ["supplier", "ingredient_id"],
 };

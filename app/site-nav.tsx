@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { LogoutButton } from "./logout-button";
 
-type SitePage = "today" | "activity" | "settings" | "inventory" | "sales" | "deliveries";
+type SitePage = "today" | "activity" | "settings" | "inventory" | "sales" | "deliveries" | "automation";
 
 const pages: Array<{ id: SitePage; label: string; href: string }> = [
   { id: "today", label: "Today", href: "/" },
   { id: "inventory", label: "Inventory", href: "/inventory" },
   { id: "sales", label: "Record sale", href: "/inventory/sales" },
   { id: "deliveries", label: "Receive deliveries", href: "/inventory/deliveries" },
+  { id: "automation", label: "Automation", href: "/automation" },
   { id: "activity", label: "Activity", href: "/activity" },
   { id: "settings", label: "Settings", href: "/settings" },
 ];

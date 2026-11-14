@@ -9,7 +9,7 @@ import { withAgentActivity } from "./activity";
 export async function getDeliveryChecks() {
   const [ingredientRows, deliveryRows, receiptRows] = await Promise.all([
     readAll("ingredients", "ingredient_id,ingredient_name,unit"),
-    readAll("incoming_deliveries", "delivery_id,ingredient_id,quantity,expected_date"),
+    readAll("agent_delivery_status", "delivery_id,ingredient_id,quantity,expected_date,closed_short"),
     readAll("delivery_receipts", "delivery_id,received_quantity,received_at"),
   ]);
   const ingredientById = new Map(ingredientRows.map((row) => [
@@ -36,9 +36,11 @@ export async function getDeliveryChecks() {
     const orderedQuantity = nonnegativeNumber(row.quantity, "Ordered delivery quantity");
     const received = receiptsByDelivery.get(deliveryId);
     const receivedQuantity = received?.quantity ?? 0;
-    const remainingQuantity = Math.max(0, orderedQuantity - receivedQuantity);
+    const unreceivedQuantity = Math.max(0, orderedQuantity - receivedQuantity);
+    const closedShort = row.closed_short === true;
+    const remainingQuantity = closedShort ? 0 : unreceivedQuantity;
     const overdue = expectedDate < today && remainingQuantity > 0;
-    const status = receivedQuantity > orderedQuantity
+    const status = closedShort ? "closed-short" : receivedQuantity > orderedQuantity
       ? "over-delivered"
       : receivedQuantity === orderedQuantity
         ? "complete"
@@ -54,10 +56,12 @@ export async function getDeliveryChecks() {
       orderedQuantity,
       receivedQuantity,
       remainingQuantity,
+      unreceivedQuantity,
       expectedDate,
       latestReceivedAt: received?.latestReceivedAt ?? null,
       status,
       flag: !ingredient ? "Ingredient is missing from the ingredients table."
+        : closedShort ? "Final delivery was short. A supplier draft is available for review."
         : overdue ? "Delivery is overdue."
           : receivedQuantity > orderedQuantity
             ? "Received more than the ordered quantity."

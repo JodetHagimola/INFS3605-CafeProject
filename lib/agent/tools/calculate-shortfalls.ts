@@ -56,7 +56,7 @@ export async function calculateShortfalls(forecast: DemandForecast | null): Prom
   const [ingredientRows, recipeRows, deliveryRows, receiptRows, inventoryResult] = await Promise.all([
     readAll("ingredients", "ingredient_id,ingredient_name,unit"),
     readAll("recipes", "product_name,ingredient_id,quantity_required"),
-    readAll("incoming_deliveries", "delivery_id,ingredient_id,quantity,expected_date"),
+    readAll("open_incoming_deliveries", "delivery_id,ingredient_id,quantity,expected_date"),
     readAll("delivery_receipts", "delivery_id,received_quantity,received_at"),
     getInventory(),
   ]);
