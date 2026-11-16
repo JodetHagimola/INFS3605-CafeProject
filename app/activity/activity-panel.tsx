@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { AgentActivity } from "@/lib/agent/activity-log";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
 import { LoadingButton, Skeleton } from "../ui/feedback";
+import { formatSydneyDateTime } from "@/lib/owner-communication-model";
 import styles from "./activity-panel.module.css";
 
 type ActivityResponse = { items?: AgentActivity[]; approvals?: ApprovalItem[]; error?: string };
@@ -71,7 +72,7 @@ export function ActivityPanel() {
             <header>
               <div>
                 <p className="eyebrow">{item.tool.replaceAll("_", " ")}</p>
-                <time dateTime={item.timestamp}>{new Date(item.timestamp).toLocaleString()}</time>
+                <time dateTime={item.timestamp}>{formatSydneyDateTime(item.timestamp)}</time>
               </div>
               <span className={`${styles.status} ${styles[item.outcome]}`}>{item.outcome}</span>
             </header>
@@ -102,7 +103,7 @@ export function ActivityPanel() {
                     <p className="eyebrow">{item.action.replaceAll("_", " ")}</p>
                     <h3>{item.summary}</h3>
                     <time dateTime={item.reviewedAt ?? item.createdAt}>
-                      {new Date(item.reviewedAt ?? item.createdAt).toLocaleString()}
+                      {formatSydneyDateTime(item.reviewedAt ?? item.createdAt)}
                     </time>
                   </div>
                   <span className={`${styles.status} ${item.status === "rejected" ? styles.error : ""}`}>

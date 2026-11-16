@@ -49,6 +49,7 @@ export async function withAgentActivity<T>(
   toolName: string,
   input: unknown,
   execute: (activityId: number) => Promise<T>,
+  options: { trigger?: string; taskId?: string } = {},
 ): Promise<T> {
   const { data, error } = await inventoryClient()
     .from("agent_activity")
@@ -57,6 +58,8 @@ export async function withAgentActivity<T>(
       input_summary: summarizeInput(input),
       outcome: "started",
       reason: "Tool call started.",
+      ...(options.trigger ? { trigger: options.trigger } : {}),
+      ...(options.taskId ? { task_id: options.taskId } : {}),
     })
     .select("id")
     .single();

@@ -208,7 +208,10 @@ export async function POST(request: Request) {
     const agentTools = createAgentTools({
       forecastDate: today,
       isPublicHoliday: holiday.error ? null : holiday.name !== null,
-    }, { onApprovalCreated: (approvalId) => createdApprovalIds.add(approvalId) });
+    }, {
+      onApprovalCreated: (approvalId) => createdApprovalIds.add(approvalId),
+      saleRequestId: `${threadId}:${userMessage.id}`,
+    });
     const messages: ModelMessage[] = [
       ...(historyRows ?? []).reverse().map((row) => ({
         role: row.role === "owner" ? "user" as const : "assistant" as const,

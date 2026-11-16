@@ -127,7 +127,8 @@ export async function POST(request: Request) {
     return result === "updated"
       ? NextResponse.json({ status: parsed.data.decision })
       : NextResponse.json({ error: "This item is no longer pending approval." }, { status: 409 });
-  } catch {
+  } catch (error) {
+    console.error("Could not update the approval inbox:", error instanceof Error ? error.message : "Unknown error");
     return NextResponse.json({ error: "The approval inbox could not be updated. Check the Supabase setup." }, { status: 500 });
   }
 }

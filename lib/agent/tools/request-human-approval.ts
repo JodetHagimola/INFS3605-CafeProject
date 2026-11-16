@@ -4,66 +4,12 @@ import {
   approvalActionSchema,
   approvalRequestDetailsSchema,
 } from "@/lib/agent/approval-schema";
-import { draftOrderSchema } from "@/lib/agent/draft-schema";
 import { inventoryClient } from "@/lib/inventory/server";
 import { withAgentActivity } from "./activity";
 
-async function matchingStandingRule(draftId: string): Promise<{ id: string; name: string } | null> {
-  const db = inventoryClient();
-  const { data: draftRow, error: draftError } = await db
-    .from("draft_orders")
-    .select("id,status,forecast_date,created_at,forecast,lines,flags,data_used")
-    .eq("id", draftId)
-    .maybeSingle();
-  if (draftError || !draftRow) {
-    console.error("Could not load a draft for standing-rule evaluation:", draftError?.message ?? "No draft found");
-    throw new Error("The draft could not be verified against standing rules.");
-  }
-  const draft = draftOrderSchema.parse({
-    id: String(draftRow.id),
-    status: draftRow.status,
-    forecastDate: draftRow.forecast_date,
-    createdAt: draftRow.created_at,
-    forecast: draftRow.forecast,
-    lines: draftRow.lines,
-    flags: draftRow.flags,
-    dataUsed: draftRow.data_used,
-  });
-  if (draft.status !== "draft" || draft.lines.length === 0) return null;
-
-  const { data: rules, error: rulesError } = await db
-    .from("standing_rules")
-    .select("id,name,ingredient_ids,supplier,maximum_total")
-    .eq("enabled", true);
-  if (rulesError) {
-    console.error("Could not read standing rules:", rulesError.message);
-    throw new Error("Standing rules could not be checked; human review is required.");
-  }
-
-  const total = Math.round(draft.lines.reduce(
-    (sum, line) => sum + line.recommendedOrderQuantity * line.recommendedSupplier.price,
-    0,
-  ) * 100) / 100;
-  if (!Number.isFinite(total) || total <= 0) return null;
-
-  const lineIngredients = new Set(draft.lines.map((line) => line.ingredientId));
-  const supplier = draft.lines[0]?.recommendedSupplier.supplier;
-  if (!supplier || draft.lines.some((line) => line.recommendedSupplier.supplier !== supplier)) return null;
-
-  const match = (rules ?? []).find((rule) => {
-    const allowedIngredients = new Set((rule.ingredient_ids ?? []).map(String));
-    return rule.supplier === supplier
-      && lineIngredients.size > 0
-      && [...lineIngredients].every((id) => allowedIngredients.has(id))
-      && typeof rule.maximum_total === "number"
-      && total <= rule.maximum_total;
-  });
-  return match ? { id: String(match.id), name: String(match.name) } : null;
-}
-
 export function createRequestHumanApprovalTool(onCreated?: (approvalId: string, autoApproved: boolean) => void) {
   return tool({
-    description: "For a proposed purchase, supplier contact/switch, or price change, create an approval item only. A saved draft order may be marked approved only when it exactly matches an enabled standing rule for all ingredients, the same supplier, and the total cap. This tool never sends an order or contacts a supplier.",
+    description: "For a proposed purchase, supplier contact/switch, or price change, create a pending human approval item. Legacy standing_rules are inactive; only the café reorder policy governs the separate test-mode ordering cycle. This tool never sends an order or contacts a supplier.",
     inputSchema: z.object({
       action: approvalActionSchema,
       summary: z.string().trim().min(1).max(500),
@@ -71,7 +17,6 @@ export function createRequestHumanApprovalTool(onCreated?: (approvalId: string, 
       draftId: z.string().uuid().optional(),
     }).strict(),
     execute: async (input) => withAgentActivity("request_human_approval", input, async () => {
-      let matchedRule: { id: string; name: string } | null = null;
       if (input.action === "place_or_send_order") {
         if (!input.draftId) {
           return {
@@ -98,7 +43,6 @@ export function createRequestHumanApprovalTool(onCreated?: (approvalId: string, 
             approval: null,
           };
         }
-        matchedRule = await matchingStandingRule(input.draftId);
         const { data, error } = await inventoryClient()
           .from("draft_orders")
           .select("id,status")
@@ -121,20 +65,14 @@ export function createRequestHumanApprovalTool(onCreated?: (approvalId: string, 
         ...input.details,
         ...(input.draftId ? { draftId: input.draftId } : {}),
         agentGenerated: true,
-        ...(matchedRule ? { standingRuleId: matchedRule.id, standingRuleName: matchedRule.name } : {}),
       };
-      const autoApproved = matchedRule !== null;
       const { data, error } = await inventoryClient()
         .from("approval_inbox")
         .insert({
           action: input.action,
           summary: input.summary,
           details,
-          status: autoApproved ? "approved" : "pending_approval",
-          ...(autoApproved ? {
-            reviewed_at: new Date().toISOString(),
-            reviewer_note: `Approved by standing rule "${matchedRule?.name ?? "unknown"}". No order was placed or sent.`,
-          } : {}),
+          status: "pending_approval",
         })
         .select("id,action,summary,details,status,created_at,reviewed_at,reviewer_note")
         .single();
@@ -144,18 +82,16 @@ export function createRequestHumanApprovalTool(onCreated?: (approvalId: string, 
       }
 
       const approvalId = String(data.id);
-      onCreated?.(approvalId, autoApproved);
+      onCreated?.(approvalId, false);
       return {
-        status: autoApproved ? "approved" as const : "pending_approval" as const,
+        status: "pending_approval" as const,
         approval: {
           id: approvalId,
           action: data.action,
           summary: data.summary,
           details: data.details,
         },
-        flags: [autoApproved
-          ? `Approved by standing rule "${matchedRule?.name ?? "unknown"}". No order was placed, no supplier was contacted, and no price was changed.`
-          : "This request is pending human review. No order was placed, no supplier was contacted, and no price was changed."],
+        flags: ["This request is pending human review. No order was placed, no supplier was contacted, and no price was changed."],
       };
     }),
   });

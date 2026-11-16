@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatSydneyDateTime } from "@/lib/owner-communication-model";
 import { getOrders } from "@/lib/supabase/server";
 import { SiteNav } from "../site-nav";
 import { OrderForm } from "../order-form";
@@ -58,7 +59,7 @@ export default async function OrdersPage() {
                     <td>
                       {order.created_at ? (
                         <time dateTime={order.created_at}>
-                          {new Date(order.created_at).toLocaleString()}
+                          {formatSydneyDateTime(order.created_at)}
                         </time>
                       ) : (
                         <span className="muted">Not available</span>

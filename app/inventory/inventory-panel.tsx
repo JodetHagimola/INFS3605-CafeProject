@@ -2,20 +2,22 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { InventoryItem, StockStatus } from "@/lib/inventory/model";
-import { recordMovement, type MovementState } from "./actions";
+import { countedAmount, type InventoryItem, type StockStatus } from "@/lib/inventory/model";
+import { displayAmount } from "@/lib/inventory-sales/model";
+import { recordInventoryCount, type CountState } from "./actions";
 import { LoadingButton } from "../ui/feedback";
 import styles from "./inventory.module.css";
 
-const initial: MovementState = { status: "idle", message: "" };
+const initial: CountState = { status: "idle", message: "" };
 const numberFormat = new Intl.NumberFormat("en-AU", { maximumFractionDigits: 6 });
 const dateFormat = new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Sydney" });
 
 function UpdateForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean }) {
-  const [state, action, pending] = useActionState(recordMovement, initial);
-  const [kind, setKind] = useState("usage");
+  const [state, action, pending] = useActionState(recordInventoryCount, initial);
+  const [amount, setAmount] = useState(item.quantity === null ? "" : displayAmount(item.quantity));
   const [justSaved, setJustSaved] = useState(false);
   const unavailable = !canWrite || item.quantity === null || item.status === "Check data" || !item.updated;
+  const validCount = countedAmount(amount) !== null;
   useEffect(() => {
     if (state.status !== "success") return;
     setJustSaved(true);
@@ -26,33 +28,27 @@ function UpdateForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean
     <input type="hidden" name="id" value={item.id} />
     <input type="hidden" name="updated" value={item.updated ?? ""} />
     <fieldset disabled={pending || unavailable}>
-      <legend>Record a change for {item.name}</legend>
-      <label>Operation
-        <select name="kind" value={kind} onChange={event => setKind(event.target.value)}>
-          <option value="usage">Used — subtract from stock</option>
-          <option value="waste">Wasted — subtract from stock</option>
-          <option value="delivery">Received — add to stock</option>
-        </select>
-      </label>
-      <label>Quantity {kind === "delivery" ? "received" : kind === "waste" ? "wasted" : "used"} ({item.unit})
-        <input name="amount" type="number" min="0.000001" step="0.000001"
-          max={kind === "delivery" ? 1000000000 : item.quantity ?? undefined} required placeholder="e.g. 2" />
+      <legend>Correct the recorded count for {item.name}</legend>
+      <label>Counted stock ({item.unit})
+        <input name="amount" type="number" min="0" max="1000000000" step="0.000001"
+          required value={amount} onChange={event => setAmount(event.target.value)} />
       </label>
       <label>Reason / reference
-        <input name="note" required maxLength={200} placeholder="e.g. Morning service" />
+        <input name="note" required maxLength={200} placeholder="e.g. Physical count at close" />
       </label>
-      <p>This is the amount to add or subtract, not the total remaining. Record a delivery only after it arrives.</p>
+      <p>Enter the amount physically counted. Any difference is recorded as an adjustment with this reason.</p>
       <LoadingButton
         type="submit"
         busy={pending}
         busyLabel="Saving..."
         success={justSaved && !pending}
         successLabel="Saved"
+        disabled={!validCount}
       >
-        Save stock change
+        Save corrected count
       </LoadingButton>
     </fieldset>
-    {unavailable && <p>{!canWrite ? "Read-only preview. Stock changes require the private development demo." : "A valid inventory record and timestamp are required before making changes."}</p>}
+    {unavailable && <p>{!canWrite ? "Stock changes are disabled by server policy." : "A valid inventory record and timestamp are required before correcting stock."}</p>}
     {state.message && <p role="status" className={state.status === "error" ? styles.error : styles.success}>{state.message}</p>}
   </form>;
 }
@@ -109,22 +105,29 @@ export default function InventoryPanel({ items, canWrite }: { items: InventoryIt
     <p aria-live="polite">Showing {visible.length} of {items.length} ingredients</p>
     {visible.length === 0 ? <div className="empty-state">{items.length === 0 ? "No ingredients have been added yet." : "No ingredients match these filters."}</div> :
       <div className="table-wrap"><table>
-        <caption className={styles.caption}>Stock refreshes every 5 seconds while visible and pauses while editing. Times use Sydney time.</caption>
-        <thead><tr><th scope="col">Ingredient</th><th scope="col">Stock</th><th scope="col">Minimum</th><th scope="col">Status</th><th scope="col">Updated</th><th scope="col">Action</th></tr></thead>
+        <caption className={styles.caption}>These are ledger-based quantities. Physical-count dates indicate when stock was last verified. Times use Sydney time.</caption>
+        <thead><tr><th scope="col">Ingredient</th><th scope="col">Stock</th><th scope="col">Minimum</th><th scope="col">Status</th><th scope="col">Last counted</th><th scope="col">Action</th></tr></thead>
         <tbody>{visible.map(item => <tr key={item.id}>
           <th scope="row">{item.name}</th>
           <td>{item.quantity === null ? "—" : `${numberFormat.format(item.quantity)} ${item.unit}`}</td>
-          <td>{item.minimum === null ? "Not set" : `${numberFormat.format(item.minimum)} ${item.unit}`}</td>
+          <td>{item.minimum === null ? "Not set" : `${numberFormat.format(item.minimum)} ${item.unit}`}
+            {item.minimum !== null && <small className={styles.countNote}>{item.autoThreshold ? "Automatic" : "Manual"}</small>}</td>
           <td><span className={`${styles.badge} ${statusClass(item.status)}`}>{item.status}</span></td>
-          <td>{item.updated && Number.isFinite(Date.parse(item.updated)) ? <time dateTime={item.updated}>{dateFormat.format(new Date(item.updated))}</time> : "—"}</td>
-          <td><button className={styles.secondary} onClick={() => setSelected(item.id)} aria-label={`Update ${item.name}`}>Update</button></td>
+          <td><span className={`${styles.badge} ${item.countDue ? styles.low : styles.good}`}>
+            {item.countDue ? "Count due" : "Count current"}
+          </span>
+            <small className={styles.countNote}>{item.lastCounted && Number.isFinite(Date.parse(item.lastCounted))
+              ? <time dateTime={item.lastCounted}>{dateFormat.format(new Date(item.lastCounted))}</time>
+              : "No physical count"}</small>
+          </td>
+          <td><button className={styles.secondary} onClick={() => setSelected(item.id)} aria-label={`Correct ${item.name} count`}>Correct a number</button></td>
         </tr>)}</tbody>
       </table></div>}
     {active && <section className={styles.editor} aria-label={`Update ${active.name}`}>
       <div className={styles.editorHeading}><h2>{active.name}</h2><button className={styles.secondary} onClick={() => setSelected(null)}>Close</button></div>
       <p>Recorded stock: {active.quantity === null ? "Unknown" : `${numberFormat.format(active.quantity)} ${active.unit}`}</p>
-      <UpdateForm key={active.id} item={active} canWrite={canWrite} />
+      <UpdateForm key={`${active.id}:${active.updated ?? ""}:${active.lastCounted ?? ""}`} item={active} canWrite={canWrite} />
     </section>}
-    <p className="sort-note">These are recorded quantities. Physical counts may be needed to confirm actual stock. A missing threshold is not treated as sufficient stock.</p>
+    <p className="sort-note">Brewly keeps this up to date from recorded sales, receipts and waste. Missing stock is never treated as zero or sufficient.</p>
   </div>;
 }

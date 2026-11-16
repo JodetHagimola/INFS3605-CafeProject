@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { getInventory } from "@/lib/inventory/server";
+import { inventoryWritesEnabled } from "@/lib/inventory/write-policy";
 import { SiteNav } from "../site-nav";
 import InventoryPanel from "./inventory-panel";
 
@@ -14,13 +15,13 @@ export default async function InventoryPage() {
   const result = await getInventory();
   return (
     <main className="page-shell">
-      <SiteNav current="inventory" />
+      <SiteNav current="stock" />
       <section style={{ margin: "40px 0 64px" }} aria-labelledby="inventory-title">
         <p className="eyebrow">DAILY OPERATIONS</p>
-        <h1 id="inventory-title">Inventory check</h1>
-        <p className="section-description">Check recorded stock and identify ingredients that need replenishment.</p>
+        <h1 id="inventory-title">Stock at a glance</h1>
+        <p className="section-description">Brewly keeps this up to date. Correct a number only after checking the physical stock.</p>
         {result.error ? <p className="notice" role="alert">{result.error}</p> :
-          <InventoryPanel items={result.items} canWrite={true} />}
+          <InventoryPanel items={result.items} canWrite={inventoryWritesEnabled()} />}
       </section>
     </main>
   );

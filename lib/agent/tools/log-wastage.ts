@@ -4,6 +4,7 @@ import { inventoryClient } from "@/lib/inventory/server";
 import { withAgentActivity } from "./activity";
 import { idValue, nonnegativeNumber, textValue } from "./shared";
 import { convertStockQuantity } from "./units";
+import { inventoryWritesEnabled } from "@/lib/inventory/write-policy";
 
 const wastageInput = z.object({
   ingredientId: z.string().regex(/^\d+$/).max(30).optional(),
@@ -20,6 +21,7 @@ export const logWastageTool = tool({
   description: "Record owner-reported wasted or perished stock. Match an exact ingredient name or ID, convert the reported unit in TypeScript, then append a waste movement through the guarded inventory function. Never edit inventory directly.",
   inputSchema: wastageInput,
   execute: async (input) => withAgentActivity("log_wastage", input, async (activityId) => {
+    if (!inventoryWritesEnabled()) throw new Error("Stock changes are disabled by server policy.");
     const db = inventoryClient();
     let ingredient: { ingredient_id: number; ingredient_name: string; unit: string } | null = null;
     if (input.ingredientId) {

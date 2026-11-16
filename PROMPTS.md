@@ -88,7 +88,7 @@ The key test for agentic AI: if the human still has to notice the problem, start
 Final test for every design decision: after this is built, does the owner's day have fewer things in it, or more?
 
 ## Context
-Brewlytics is a café inventory app: Next.js + TypeScript, Supabase, deployed on Vercel, developed in GitHub Codespaces. The agent is Gemini, called server-side via the Vercel AI SDK (`ai` and `@ai-sdk/google`) using GOOGLE_GENERATIVE_AI_API_KEY. Read the model ID from an env var `GEMINI_MODEL`, defaulting to `gemini-3.6-flash`, and return a clear error if the model ID is rejected. Do not hardcode the model anywhere else. `AGENT_PASSCODE` is the shared passcode. Never print, log, hardcode or commit secrets and do not edit .env.local.
+Brewlytics is a café inventory app: Next.js + TypeScript, Supabase, deployed on Vercel, developed in GitHub Codespaces. The agent is Gemini, called server-side via the Vercel AI SDK (`ai` and `@ai-sdk/google`) using GOOGLE_GENERATIVE_AI_API_KEY. Read the model ID from an env var `GEMINI_MODEL`, defaulting to `gemini-3.5-flash-lite`, and return a clear error if the model ID is rejected. Do not hardcode the model anywhere else. `AGENT_PASSCODE` is the shared passcode. Never print, log, hardcode or commit these values, and do not edit .env.local.
 
 Existing pages: Today, Inbox, Chat, Activity, Settings. Existing agent route and tools already exist (inventory, recipes, forecast, shortfalls, drafts, activity log, approval inbox). Reuse what works. The forecast is now done by the Gemini agent from sales history (the old Random Forest/FastAPI model is gone), so remove any stale UI text about a "saved model".
 
@@ -246,3 +246,102 @@ Work in phases and tell me what changed and how to check it after each:
 6. Micro-interactions, reduced-motion handling, mobile and accessibility pass
 
 Keep TypeScript strict, keep changes visual only, and show me before/after summaries per page.
+
+# Task: Make Brewly run the café day to day, and involve the owner only when a human decision is truly needed
+
+## Step 0: Sync, inspect, plan (change nothing yet)
+1. Local main is 5 commits behind origin/main. Run `git pull --rebase origin main`, resolve any conflicts, then re-read the files you depend on.
+2. Read the migration at `supabase/migrations/20261116_brewly_automation.sql`. Compare it to the LIVE database (information_schema, constraints, triggers, the guarded inventory function) and tell me about anything that differs from what it assumes. Don't run it until I approve your plan.
+3. Query the live database and tell me the exact cause of each of today's data-check warnings: "7 ingredients have no inventory record", "1 inventory record has a missing stock quantity or minimum", "4 inventory records have stale or missing update times", "a delivery for Milk is overdue and was not counted". My expectation: seven ingredients (Caramel Syrup, Chai Powder, Lids, Matcha Powder, Sugar, Takeaway Cups, Vanilla Syrup) have no inventory row; Oat Milk has no minimum; the stale rows are old because nothing updates them automatically; the overdue milk is incoming_deliveries #1 (expected 2026-10-29, no supplier) plus #113 (DUMMY-SEED-BATCH-B). Confirm or correct.
+4. Reply with a short plan (files to add, change, merge or remove, plus risks). Wait for my approval.
+
+## Why we are doing this
+The owner finds Brewlytics too manual: checking inventory, recording sales, receiving deliveries and registering orders all need hand entry. Brewly (the agent) should oversee the whole app, do the tedious work itself, and bring the owner only the few decisions that need them. Design around the owner's day:
+- **Busy trading hours:** hands full. No prompts, no modals, no sounds. At most a glanceable status.
+- **Quiet morning before opening:** a 30-second brief with at most 3 decisions, each one tap.
+- **Quiet evening after close:** a short wrap-up of what Brewly handled, tomorrow's outlook, and any batched approvals.
+
+Course key test: if the owner still has to notice the problem, start the AI, check the output and carry out the action, it's a tool, not an agent. After this work the owner's day must have fewer things in it, not more. Avoid the five friction points: another destination, double entry, bad timing, context switching, learning curve.
+
+## Architecture: the Brewly cycle
+- Build `lib/agent/cycle.ts`: sense (read data) -> decide (rules in code) -> act (within autonomy policy) -> log -> notify. Every write is logged to `agent_activity` with a `trigger` and `task_id`.
+- Triggers: (1) events: after any sale, delivery receipt or stock movement is recorded, enqueue a reconcile task; (2) schedule: pre-open (open time minus 30 min), hourly during trading hours, closing wrap-up (close time + 15 min), overnight reconcile; (3) owner chat.
+- Scheduling: check the Vercel plan's cron limits (Hobby plans have historically been limited to once a day). If frequent cron isn't available, use lazy catch-up: when the app is opened or a cycle runs, process everything due since the last run. Protect cron routes with `CRON_SECRET`.
+- Use the `agent_tasks` table as a work queue with retries, backoff, and a `dedupe_key` so the same action (e.g. the same supplier email) can't run twice.
+- **Code computes, the model narrates.** All numbers, thresholds, quantities and money come from TypeScript. `gemini-3.5-flash-lite` (via `GEMINI_MODEL`) is used only to (a) write owner-facing wording, (b) parse free text such as "sold 12 lattes" or a supplier reply into a small validated JSON schema, and (c) choose between options when the data is ambiguous. Don't rely on long tool loops. Every model call needs a deterministic fallback so the owner never sees a blank screen or raw error. Flash-Lite defaults to minimal thinking; use a higher thinking level only for the rare multi-step call, and never send a request whose last message has the model role.
+- Autonomy kill switch: `cafe_settings.automation_paused`. When true, Brewly observes and drafts but takes no outbound actions.
+
+## Workstream A: Sales capture (no more hand entry)
+- `POST /api/pos/sales`: webhook for a POS to call. Verify an HMAC signature (`POS_WEBHOOK_SECRET`). Body: `external_ref`, `occurred_at`, `items[{product_name, quantity}]`. Idempotent through `inventory_sales.external_ref` (unique index in the migration). Records through the same guarded function as the Record sale page, with `source = 'pos'`.
+- Simulated POS for the demo, always labelled `source = 'simulated'`: generate realistic sales for the current day from weekday and hour-of-day patterns in "Historical Sales Data", using lazy catch-up so there are never "0 sales" during trading hours. Provide a toggle in Settings > Demo tools (on by default for the demo).
+- Chat: "we sold 12 lattes this morning" -> parse (Gemini structured output, validated against recipes) -> record with `source = 'chat'` -> reply in one line. Ask a question only if ambiguous.
+- The Record sale page becomes a Demo tools / fallback "Quick add". Remove it from the main nav.
+- Recording a sale must never double count: idempotency keys everywhere.
+
+## Workstream B: Inventory maintains itself
+- Stock is the movement ledger, updated automatically by sales, deliveries and waste. The Inventory page becomes a read-only "Stock at a glance" labelled "Brewly keeps this up to date", with one "Correct a number" action that writes an adjustment movement with a reason.
+- Auto thresholds: for rows with `inventory.auto_threshold = true`, set `minimum_stock = ceil(avg_daily_usage x (lead_time_days + 1) x 1.1)`, using the `brewly_avg_daily_usage` view and the preferred supplier's `lead_time_days`. Recalculate weekly and whenever a supplier or recipe changes. Log changes. Owners never type thresholds.
+- Replace the "stale update time" idea with stock confidence. Because stock comes from the ledger, a missing recent update is not itself a problem. Use `last_counted_at`: if an ingredient is high-use or more than 7 days since its last count, include a one-tap quick check in the closing wrap-up ("Milk: about 32 L left?" [Looks right] [Enter amount]), maximum 2 per day. "Looks right" sets `last_counted_at`; a different amount writes an adjustment.
+- Self-healing: a missing inventory row, a missing minimum or an unset unit is fixed by Brewly automatically. Data-health detail goes to Activity. It reaches the Today screen only when a human decision is required.
+- **Scale check:** the forecast implies roughly 570 drinks a day (about 80 L of milk a day) but Milk is recorded at about 19.9 L with a 19 L minimum. Propose a re-baseline so stock and minimums match sales volume: for each ingredient, opening stock = 2 days of average usage and minimum = 1 day, applied through the guarded function or an adjustment movement (only `delivery` and `usage` kinds are allowed) so the ledger stays consistent. Ask me before applying it.
+
+## Workstream C: Deliveries receive and chase themselves
+- Reuse the existing tables and flow: `cafe_sensor_events`, `delivery_arrival_decisions`, `delivery_shortage_drafts`, `delivery_receipts`, `cafe_test_mail`. Don't create duplicates.
+- Auto-receive: for every delivery due today, run the arrival check automatically in the supplier's expected window (the simulated receiving sensor for the demo, with realistic outcomes: about 90% full, 7% short, 3% late, labelled simulated). Within +/-3% of expected: record the receipt, update stock, mark the delivery received, tell the owner only in the wrap-up.
+- Short delivery: record what actually arrived, keep the remainder expected, draft the shortage email and send it automatically according to the email mode and policy. Ask the owner only if the shortage is large (over 25%), it's unclear whether it's final, or the supplier replies that they can't supply.
+- Overdue: if no receipt by expected date + 1 day, send a chase email automatically (maximum 2, 24 hours apart, tracked in `chase_count` and `last_chased_at`). After that, one decision card: "Milk is 3 days late. Order from [backup supplier]?" [Approve] [Keep waiting]. After 7 days overdue, set `status = 'lapsed'` automatically and raise a replacement need. Overdue deliveries are never counted as incoming stock, and are mentioned to the owner once.
+- Respect `incoming_deliveries.status`. The Receive deliveries page becomes exceptions-only (needs a decision or a human). The manual "confirm receipt" form moves under a "Receive manually" action per delivery.
+
+## Workstream D: Ordering and supplier emails
+- Reorder cycle: for each ingredient where projected stock before the next delivery window falls below the minimum, compute quantity in whole packs (`supplier_prices.pack_size`, rounded up, respecting `minimum_order`), choose the supplier (the `cafe_reorder_rules` preferred supplier, else the cheapest that meets the minimum and the lead time), and compute the cost.
+- Policy (from `cafe_reorder_rules` plus `cafe_spend_policy`): if the order total is at or below `auto_order_limit`, today's spend plus this order is within `daily_limit` (and `weekly_limit` if set), the supplier is active with a contact email, and the quantity is at most 2x the rule's normal order, Brewly places it automatically. That means: create the `draft_orders` row (approved by policy), a `delivery_batches` row and `incoming_deliveries` rows (`source = 'order'`, expected date = today + lead time), then send the order email. Tell the owner afterwards in one line. Otherwise create an approval card. No auto-order for an ingredient with no supplier price or contact; escalate instead.
+- Email layer `lib/email`: mode comes from `cafe_settings.email_mode` (`test` or `live`; default `test`, which writes to `cafe_test_mail`). In live mode use the provider already configured or Resend (`RESEND_API_KEY`, `EMAIL_FROM`). Recipients may only come from `suppliers.contact_email`. Limit to one email per supplier per purpose per day (use `dedupe_key`). Plain-text templates with order lines, quantities in packs and litres/kg, reference number and reply-to set to the owner. Gemini may polish a sentence, but numbers and lines are templated in code.
+- Retire the manual "Register a placed order" step: orders are registered automatically when sent.
+- Display units for humans: "2 crates (24 L) at $4.80 per L", never "$0.0048 per pack". Prices in `supplier_prices` stay per stock unit (per ml/g/pcs); show litres and kg in the UI.
+
+## Workstream E: Owner communication
+- Read open/close time, rush windows and owner contact from `cafe_settings`. All times in Australia/Sydney. Remove every place that shows UTC.
+- Notification queue `owner_notifications`: each item has `severity` (urgent / decision / info) and `surface_after`. Decisions raised during rush hours are deferred to the next quiet window. During rush, only an urgent item (stock will run out before the next quiet window) may appear, as a silent badge on the chat dock. Never a modal, popup or sound.
+- Owner digest at pre-open and at wrap-up (email now, SMS optional later): 1 to 3 items each with Approve and Edit links. Links are single-use signed tokens (store only a hash in `approval_tokens`, expiry 24 hours). A GET shows a confirm page and only a POST executes the decision, so email link scanners can't approve anything.
+- Today screen: remove the hard-coded "Margaret" (use `cafe_settings.owner_name` if set, otherwise no name) and the generic filler greeting. Before opening it's a morning brief. After closing it's an end-of-day wrap-up plus tomorrow's outlook. Layout: traffic card, a short "Brewly handled" list (sales recorded, deliveries received, orders sent, emails sent), at most 3 decisions with one primary action each, one all-clear line, and details collapsed. Data-check warnings never appear on the front screen unless a decision is needed.
+- Chat dock: stays global, quick actions follow the current page, shows "Brewly is working..." while a cycle runs, and shows approval cards inline.
+
+## Workstream F: Consolidate and tidy
+- Navigation: **Today, Stock, Deliveries, Activity, Settings**. Move "Automation" into Settings > Autonomy. Keep old routes redirecting.
+- Settings sections: Autonomy (auto-order limit, daily and weekly caps, one reorder rule per ingredient with preferred supplier, pack quantity and on/off, pause switch), Suppliers (contact email, lead time, cutoff), Cafe profile (name, owner, hours, rush windows, owner email), Demo tools (simulate a day, sales simulator, arrival simulator, manual sale form, simulated sensor).
+- One policy engine: `cafe_reorder_rules` + `cafe_spend_policy` are the source of truth. Review `standing_rules` and `rules` (decision limits). Migrate anything useful, mark them legacy in code, and don't drop tables without asking me. Remove or tag the "Dummy rule" and "Demo Seed Supplier" rows so they don't appear in the real UI.
+- UI consistency: one button style (Deliveries and Automation use green primaries and Retry due emails is unstyled while the rest of the app is brown), fix the oversized empty "Workspace access" card in Settings, check mobile layouts, keep the soft rounded styling and loading states.
+- Hardening: add a session check to `/api/recommendations` or remove it (the legacy Python path is no longer used by the agent; tell me before deleting `ML/`). Align the model default everywhere to `gemini-3.5-flash-lite`. Add `npm test` with vitest covering the pure logic: thresholds, reorder quantities, delivery tolerance, autonomy tiers, quiet-window deferral, idempotency.
+- Production writes: inventory writes are currently dev-only. Introduce `INVENTORY_WRITES_ENABLED`, and authorize automated paths with the session, `CRON_SECRET` or the webhook HMAC. Never expose the Supabase secret key to the browser.
+
+## Supabase work
+- Review and apply `supabase/migrations/20261116_brewly_automation.sql` (after Step 0 approval). It adds `cafe_settings`, `suppliers`, pack and lead-time columns on `supplier_prices`, delivery status fields, `inventory.last_counted_at` and `auto_threshold`, triggers that keep `last_updated` current and create an inventory row for every new ingredient, the `brewly_avg_daily_usage` view, `inventory_sales.source` and `external_ref`, spend-policy columns, `agent_tasks`, `owner_notifications`, `approval_tokens`, and RLS on the new tables. It also repairs today's data: it creates the seven missing inventory rows (with opening-stock movements), sets missing minimums, and lapses delivery #1 and #113.
+- Known facts about the live schema: `ingredients.unit` allows only 'ml', 'g' and 'pcs'; `inventory_movements.kind` allows only 'delivery' and 'usage', with positive amounts; `inventory_movements.ingredient_id` references `inventory`; `delivery_batches.draft_id` is unique, so there is one batch per draft. Verify these against the live database before relying on them.
+- Seed realistic reorder rules: one `cafe_reorder_rules` row per ingredient (11), minimums from the view, suppliers taken from `supplier_prices`. Replace "Demo Wholesale Dairy" with a real supplier name. Make sure every ingredient has at least one supplier price and each supplier has a contact email (the migration uses placeholder example.test addresses, so replace them before using live mode).
+- Seed about 14 days of recorded sales (`inventory_sales` plus ingredient rows and movements, `source = 'simulated'`) so the brief has real recent history.
+- If you find the guarded inventory function blocks any of this, extend the function rather than writing around it. Keep the ledger consistent.
+
+## Boundaries
+- Brewly may send supplier emails and place routine orders **only** inside the owner's policy: auto-order limit, daily and weekly caps, active suppliers with a contact email, quantity limits, `automation_paused = false`, and an email mode that allows it. Everything else becomes a decision card.
+- Always require approval for: orders above the limit, switching suppliers, price changes, unusual quantities, large write-offs, and anything with missing or conflicting data.
+- Every outbound action is logged in `agent_activity` and reversible where possible (a cancel email, or a cancelled delivery). Never invent suppliers, prices or quantities. Never delete or overwrite history. Don't touch `.env.local` or print secrets. Don't add dependencies without telling me.
+
+## Acceptance tests (check these before saying you're done)
+- Opening the app shows a clean brief with no data-check errors, no "Margaret", and no more than 3 decisions.
+- Sales appear throughout the day without anyone entering them, with no duplicates after a retry of the same `external_ref`.
+- A delivery due today is received automatically; a short one is recorded, the remainder stays expected, and a shortage email appears in the test mailbox without the owner doing anything.
+- An overdue delivery gets chased automatically, then raises exactly one decision card.
+- A low-stock ingredient inside policy is ordered automatically: email in the test mailbox, expected delivery created, one info line for the owner. Outside policy it creates an approval card with one tap to approve.
+- Approving through a digest link works once, only via a POST on the confirm page, and fails after use or expiry.
+- During rush hours nothing pops up; deferred items appear in the next quiet window.
+- Everything displays in Sydney time. Setting `automation_paused = true` stops all outbound actions.
+
+## Working rules
+Work in phases and report after each (what changed, how to test it, any risks), then wait for my go-ahead:
+1. Plan and live-schema verification (Step 0)
+2. Migration, data repair and the scale re-baseline proposal
+3. Workstream A and B (sales capture, self-maintaining stock)
+4. Workstream C (deliveries)
+5. Workstream D (ordering and email, test mode only)
+6. Workstream E (brief, deferral, digest links)
+7. Workstream F (navigation, consolidation, hardening, tests)

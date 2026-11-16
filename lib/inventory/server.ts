@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { numeric, stockStatus, type InventoryItem } from "./model";
+import { isStockCountDue } from "./automation-model";
 
 export function inventoryClient() {
   const url = process.env.SUPABASE_URL;
@@ -25,7 +26,7 @@ export async function getInventory(): Promise<{ items: InventoryItem[]; error: s
     }
     const [ingredients, inventory] = await Promise.all([
       readAll("ingredients", "ingredient_id,ingredient_name,unit"),
-      readAll("inventory", "ingredient_id,quantity_in_stock,last_updated,minimum_stock"),
+      readAll("inventory", "ingredient_id,quantity_in_stock,last_updated,minimum_stock,last_counted_at,auto_threshold"),
     ]);
     const byId = new Map(inventory.map(row => [String(row.ingredient_id), row]));
     const items = ingredients.map(ingredient => {
@@ -33,10 +34,14 @@ export async function getInventory(): Promise<{ items: InventoryItem[]; error: s
       const quantity = numeric(row?.quantity_in_stock);
       const minimum = numeric(row?.minimum_stock);
       const invalidMinimum = row?.minimum_stock != null && minimum === null;
+      const lastCounted = typeof row?.last_counted_at === "string" ? row.last_counted_at : null;
       return {
         id: String(ingredient.ingredient_id), name: String(ingredient.ingredient_name),
         unit: String(ingredient.unit), quantity, minimum,
         updated: typeof row?.last_updated === "string" ? row.last_updated : null,
+        lastCounted,
+        countDue: isStockCountDue(lastCounted, Date.now()),
+        autoThreshold: row?.auto_threshold === true,
         status: invalidMinimum ? "Check data" as const : stockStatus(!!row, quantity, minimum),
       };
     }).sort((a, b) => a.name.localeCompare(b.name));

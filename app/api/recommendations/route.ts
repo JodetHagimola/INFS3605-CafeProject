@@ -1,9 +1,14 @@
 
 import { NextResponse } from "next/server";
+import { hasAgentSession } from "@/lib/agent/auth";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  if (!await hasAgentSession()) {
+    return NextResponse.json({ error: "Please sign in to view recommendations." }, { status: 401 });
+  }
+
   try {
     const response = await fetch(
       "http://127.0.0.1:8000/recommendations",

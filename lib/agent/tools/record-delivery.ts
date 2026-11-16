@@ -4,6 +4,7 @@ import { inventoryClient } from "@/lib/inventory/server";
 import { withAgentActivity } from "./activity";
 import { idValue, nonnegativeNumber, textValue } from "./shared";
 import { convertStockQuantity } from "./units";
+import { inventoryWritesEnabled } from "@/lib/inventory/write-policy";
 
 const deliveryInput = z.object({
   deliveryId: z.string().regex(/^\d+$/).max(30).optional(),
@@ -20,6 +21,7 @@ export const recordDeliveryTool = tool({
   description: "Record an owner-reported delivery. Match an incoming delivery by ID when available, otherwise match the exact ingredient name. Convert the reported unit to the inventory unit in TypeScript, append the movement, and update inventory atomically. Never edit an order or mark it sent.",
   inputSchema: deliveryInput,
   execute: async (input) => withAgentActivity("record_delivery", input, async (activityId) => {
+    if (!inventoryWritesEnabled()) throw new Error("Stock changes are disabled by server policy.");
     const db = inventoryClient();
     let delivery: { delivery_id: number; ingredient_id: number; quantity: number } | null = null;
     let ingredient: { ingredient_id: number; ingredient_name: string; unit: string } | null = null;

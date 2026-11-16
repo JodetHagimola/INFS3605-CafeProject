@@ -769,11 +769,45 @@ tbody tr:last-child td {
   text-decoration: none;
 }
 
+.secondary-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(89 57 39 / 12%);
+  border-radius: var(--radius-pill);
+  background: var(--green-pale);
+  color: var(--coffee);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 18px;
+  text-decoration: none;
+  transition: transform var(--motion-fast) var(--ease-soft), box-shadow var(--motion-fast) var(--ease-soft), background-color var(--motion-fast) var(--ease-soft);
+}
+
+.secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--coffee-light);
+  box-shadow: var(--shadow-soft);
+}
+
+.secondary-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .reject-button {
   background: var(--rust-deep);
 }
 
 .primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled),
 .reject-button:hover:not(:disabled),
 .order-form button:hover:not(:disabled) {
   transform: translateY(-1px);

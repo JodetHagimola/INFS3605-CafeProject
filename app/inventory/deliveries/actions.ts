@@ -4,6 +4,7 @@ import { hasAgentSession } from "@/lib/agent/auth";
 import { inventoryClient } from "@/lib/inventory/server";
 import { tailorSupplierDraft } from "@/lib/inventory-deliveries/followups";
 import { movementAmount } from "@/lib/inventory/model";
+import { inventoryWritesEnabled } from "@/lib/inventory/write-policy";
 
 export type DeliveryState = { status: "idle" | "success" | "error"; message: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -15,6 +16,7 @@ function refresh() {
 }
 export async function registerDelivery(_previous: DeliveryState, form: FormData): Promise<DeliveryState> {
   if (!(await hasAgentSession())) return fail("Please sign in before updating deliveries.");
+  if (!inventoryWritesEnabled()) return fail("Stock changes are disabled by server policy.");
   const id = String(form.get("draftId") ?? "");
   const date = String(form.get("expected") ?? "");
   const reference = String(form.get("reference") ?? "").trim();
@@ -34,6 +36,7 @@ export async function registerDelivery(_previous: DeliveryState, form: FormData)
 }
 export async function receiveDelivery(_previous: DeliveryState, form: FormData): Promise<DeliveryState> {
   if (!(await hasAgentSession())) return fail("Please sign in before updating deliveries.");
+  if (!inventoryWritesEnabled()) return fail("Stock changes are disabled by server policy.");
   const arrival = form.get("arrival");
   if (arrival !== "partial" && arrival !== "final") return fail("Choose whether more is coming or this is the final delivery.");
   const request = String(form.get("request") ?? "");

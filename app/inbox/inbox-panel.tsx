@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
 import type { AgentActivity } from "@/lib/agent/activity-log";
 import { LoadingButton, Skeleton } from "../ui/feedback";
+import { formatSydneyDateTime } from "@/lib/owner-communication-model";
 import styles from "./inbox-panel.module.css";
 
 type ApiResult = {
@@ -183,7 +184,7 @@ export function InboxPanel() {
             <header>
               <div>
                 <p className="eyebrow">{flag.tool.replaceAll("_", " ")}</p>
-                <time dateTime={flag.timestamp}>{new Date(flag.timestamp).toLocaleString()}</time>
+                <time dateTime={flag.timestamp}>{formatSydneyDateTime(flag.timestamp)}</time>
               </div>
               <span className={styles.status}>{flag.outcome}</span>
             </header>
@@ -318,7 +319,7 @@ export function InboxPanel() {
             <header><h3>{item.summary}</h3><span className={styles.status}>{item.status}</span></header>
             {item.reviewerNote && <p>{item.reviewerNote}</p>}
             <time dateTime={item.reviewedAt ?? item.createdAt}>
-              {new Date(item.reviewedAt ?? item.createdAt).toLocaleString()}
+              {formatSydneyDateTime(item.reviewedAt ?? item.createdAt)}
             </time>
           </article>)}
         </div>

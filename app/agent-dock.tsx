@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { z } from "zod";
 import { agentMessageSchema, type AgentMessage, type AgentMessagePart } from "@/lib/agent/chat-schema";
 import type { ApprovalItem } from "@/lib/agent/approval-schema";
@@ -74,6 +75,7 @@ function responseError(value: unknown): string | null {
 }
 
 export function AgentDock() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [thread, setThread] = useState<Thread | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -86,6 +88,10 @@ export function AgentDock() {
   const [actionBusy, setActionBusy] = useState("");
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("Voice assistant is off.");
+  const [ownerBadge, setOwnerBadge] = useState(false);
+  const [cycleRunning, setCycleRunning] = useState(false);
+  const [ownerInRush, setOwnerInRush] = useState(false);
+  const [statusError, setStatusError] = useState("");
   const loaded = useRef(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const recognition = useRef<VoiceRecognition | null>(null);
@@ -96,6 +102,15 @@ export function AgentDock() {
   const submitMessageRef = useRef<(text: string) => Promise<void>>(async () => {});
   const hasOwnerAction = messages.some((message) =>
     message.parts.some((part) => part.type === "approval_card" && part.item.status === "pending_approval"));
+  const quickActions = pathname.startsWith("/inventory/deliveries")
+    ? ["Summarize deliveries that need attention", "What should I do about overdue deliveries?"]
+    : pathname.startsWith("/inventory")
+      ? ["Which stock items need attention?", "Summarize recent stock changes"]
+      : pathname.startsWith("/automation")
+        ? ["Summarize the current automation settings", "What will Brewly handle automatically?"]
+        : pathname.startsWith("/settings")
+          ? ["Explain the current café settings", "What should I review in automation?"]
+          : ["What should I focus on right now?", "Summarize today's café status"];
 
   function startVoiceRecognition() {
     if (!voiceEnabledRef.current || !recognition.current || recognitionRunning.current) return;
@@ -217,6 +232,38 @@ export function AgentDock() {
     voiceEnabledRef.current = false;
     recognition.current?.abort();
     window.speechSynthesis?.cancel();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function refreshOwnerStatus() {
+      try {
+        const response = await fetch("/api/owner/status", { cache: "no-store" });
+        const payload: unknown = await response.json();
+        if (!response.ok || typeof payload !== "object" || payload === null
+          || !("hasBadge" in payload) || typeof payload.hasBadge !== "boolean"
+          || !("cycleRunning" in payload) || typeof payload.cycleRunning !== "boolean"
+          || !("isRush" in payload) || typeof payload.isRush !== "boolean") {
+          throw new Error(responseError(payload) ?? "Owner status returned an invalid response.");
+        }
+        if (!active) return;
+        setOwnerBadge(payload.hasBadge);
+        setCycleRunning(payload.cycleRunning);
+        setOwnerInRush(payload.isRush);
+        setStatusError("");
+      } catch (requestError) {
+        if (!active) return;
+        setStatusError(requestError instanceof Error ? requestError.message : "Owner status could not be loaded.");
+      }
+    }
+    void refreshOwnerStatus();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshOwnerStatus();
+    }, 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -441,6 +488,11 @@ export function AgentDock() {
         : null;
     }
     if (part.type === "approval_card") {
+      if (ownerInRush) {
+        return <p className={styles.cardStatus} key={`${message.id}-${index}`}>
+          Non-urgent approvals return after the rush.
+        </p>;
+      }
       return (
         <section className={styles.inlineCard} key={`${message.id}-${index}`}>
           <p className={styles.cardEyebrow}>
@@ -526,6 +578,19 @@ export function AgentDock() {
             </div>
           </header>
           <p className={styles.voiceStatus} role="status" aria-live="polite">{voiceStatus}</p>
+          <div className={styles.quickActions} aria-label="Quick questions for this page">
+            {quickActions.map((prompt) => (
+              <button key={prompt} type="button" disabled={sending || loadingHistory || !thread}
+                onClick={() => void submitMessage(prompt)}>
+                {prompt}
+              </button>
+            ))}
+          </div>
+          {statusError && <p className={styles.statusError} role="status">{statusError}</p>}
+          {cycleRunning && <p className={styles.cycleStatus} role="status" aria-live="polite">
+            <span className="typing-dots" aria-hidden="true"><span /><span /><span /></span>
+            Brewly is working...
+          </p>}
           <div className={styles.messages} aria-live="polite" aria-busy={sending || loadingHistory}>
             {loadingHistory
               ? <div className={styles.historyLoading} role="status">
@@ -574,7 +639,7 @@ export function AgentDock() {
           onClick={() => setOpen(true)}
         >
           <span aria-hidden="true">B</span>
-          {hasOwnerAction && <span className={styles.badge} aria-label="The agent has something for you" />}
+          {((!ownerInRush && hasOwnerAction) || ownerBadge) && <span className={styles.badge} aria-label="The agent has something for you" />}
         </button>
       )}
     </>

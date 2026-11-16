@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatSydneyDateTime } from "@/lib/owner-communication-model";
 import { connection } from "next/server";
 import type { OrderRequest } from "@/lib/order-requests/server";
 import { getOrderRequests } from "@/lib/order-requests/server";
@@ -41,7 +42,7 @@ function RequestCard({ request }: { request: OrderRequest }) {
             {request.status === "approved" ? "Approved" : "Rejected"} by{" "}
             <strong>{request.approverName ?? "Approver"}</strong>
             {request.decidedAt && (
-              <> on <time dateTime={request.decidedAt}>{new Date(request.decidedAt).toLocaleString()}</time></>
+              <> on <time dateTime={request.decidedAt}>{formatSydneyDateTime(request.decidedAt)}</time></>
             )}
           </p>
           {request.decisionNote && <p>{request.decisionNote}</p>}

@@ -7,6 +7,9 @@ export type InventoryItem = {
   quantity: number | null;
   minimum: number | null;
   updated: string | null;
+  lastCounted: string | null;
+  countDue: boolean;
+  autoThreshold: boolean;
   status: StockStatus;
 };
 
@@ -30,4 +33,10 @@ export function movementAmount(value: unknown): number | null {
   if (typeof value !== "string" || !/^\d+(\.\d{1,6})?$/.test(value.trim())) return null;
   const n = Number(value);
   return n > 0 && n <= 1000000000 ? n : null;
+}
+
+export function countedAmount(value: unknown): number | null {
+  if (typeof value !== "string" || !/^\d+(\.\d{1,6})?$/.test(value.trim())) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1000000000 ? n : null;
 }

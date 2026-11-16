@@ -81,7 +81,7 @@ export default function SaleForm({ products, canWrite }: { products: SaleProduct
   }
 
   return <div className={styles.card}>
-    {!canWrite && <p className="notice">Sign in to record sales.</p>}
+    {!canWrite && <p className="notice">Stock changes are disabled by server policy.</p>}
     <form onSubmit={save}>
       <div className={styles.fields}>
         <label htmlFor="sale-drink">Drink
@@ -104,7 +104,7 @@ export default function SaleForm({ products, canWrite }: { products: SaleProduct
         <p>The saved sale uses the current database recipe. Stock is checked when you confirm.</p>
       </div>}
       <p>Record a completed sale once. Do not also enter the same ingredient usage through the manual stock form.</p>
-      {!confirmed && <button type="submit" className={styles.primary}
+      {!confirmed && <button type="submit" className="primary-button"
         disabled={pending || !ready || !canWrite || (!intent && (!recipe || !validCount))}>
         {pending ? "Saving sale…" : intent ? "Retry same sale" : "Confirm sale"}
       </button>}
@@ -124,8 +124,8 @@ export default function SaleForm({ products, canWrite }: { products: SaleProduct
     </section>}
     {intent && <p className={styles.reference}>Sale reference: <code>{intent.id}</code></p>}
     {confirmed && <div className={styles.buttons}>
-      <button type="button" className={styles.primary} onClick={nextSale}>Record another sale</button>
-      <a className={styles.secondary} href="/inventory">View updated inventory</a>
+      <button type="button" className="primary-button" onClick={nextSale}>Record another sale</button>
+      <a className="secondary-button" href="/inventory">View updated inventory</a>
     </div>}
     {result.status === "uncertain" && <p>Keep this tab open and use <strong>Retry same sale</strong> after checking the connection. The same reference will not deduct stock twice.</p>}
   </div>;

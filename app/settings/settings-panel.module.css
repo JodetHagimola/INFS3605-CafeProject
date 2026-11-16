@@ -1,11 +1,61 @@
 .panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-  gap: 18px;
+  gap: 32px;
   margin-top: 28px;
 }
 
-.card {
+.section {
+  display: grid;
+  gap: 18px;
+  scroll-margin-top: 110px;
+}
+
+.section > h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 400;
+}
+
+.sectionDescription,
+.muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.sectionNav {
+  position: sticky;
+  z-index: 5;
+  top: 94px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 1px solid rgb(89 57 39 / 8%);
+  border-radius: var(--radius-pill);
+  background: rgb(251 246 237 / 94%);
+  box-shadow: var(--shadow-soft);
+  padding: 6px;
+  backdrop-filter: blur(12px);
+}
+
+.sectionNav a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  padding: 8px 14px;
+  transition: background-color var(--motion-fast) var(--ease-soft), color var(--motion-fast) var(--ease-soft);
+}
+
+.sectionNav a:hover,
+.sectionNav a:focus-visible {
+  background: var(--green-pale);
+  color: var(--coffee);
+}
+
+.card,
+.supplierForm {
   display: grid;
   align-content: start;
   gap: 14px;
@@ -13,112 +63,246 @@
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
-  padding: 24px;
+  padding: clamp(18px, 3vw, 26px);
+}
+
+.card h3,
+.card p,
+.supplierForm h3 {
+  margin: 0;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+}
+
+.form,
+.ruleForm,
+.supplierForm {
+  min-width: 0;
+}
+
+.form,
+.ruleForm {
+  display: grid;
+  gap: 14px;
+}
+
+.form label,
+.ruleForm label,
+.supplierForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form input:not([type="checkbox"]),
+.form select,
+.ruleForm input:not([type="checkbox"]),
+.ruleForm select,
+.supplierForm input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgb(89 57 39 / 18%);
+  border-radius: var(--radius-control);
+  background: var(--cream);
+  padding: 9px 12px;
+  color: var(--ink);
+  font: inherit;
+}
+
+.check {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px !important;
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 3px 0 0;
+  accent-color: var(--coffee);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.pauseControl {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  border-left: 1px solid var(--line);
+  padding-left: 16px;
+}
+
+.pauseControl p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ruleList,
+.supplierList {
+  display: grid;
+  gap: 12px;
+}
+
+.ruleForm {
+  border: 1px solid rgb(89 57 39 / 10%);
+  border-radius: var(--radius-soft);
+  background: rgb(243 232 216 / 34%);
+  padding: 18px;
+}
+
+.ruleForm h4 {
+  margin: 0 0 4px;
+  color: var(--coffee);
+  font-size: 17px;
+}
+
+.ruleForm h4 span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.ruleForm p {
+  margin: 0;
+}
+
+.windows {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-soft);
+  background: rgb(243 232 216 / 28%);
+  padding: 16px;
+}
+
+.windows legend {
+  padding-inline: 6px;
+  color: var(--coffee);
+  font-weight: 700;
+}
+
+.windowRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.windowRow button {
+  min-height: 44px;
+}
+
+.linkList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.notice,
+.legacy {
+  border: 1px solid rgb(89 57 39 / 10%);
+  border-radius: var(--radius-soft);
+  background: var(--green-pale);
+  padding: 14px 16px;
+}
+
+.legacy {
+  background: rgb(243 232 216 / 45%);
+}
+
+.success {
+  margin: 0;
+  color: var(--coffee);
+  font-size: 14px;
+}
+
+.error {
+  margin: 0;
+  border: 1px solid rgb(113 59 43 / 18%);
+  border-radius: var(--radius-soft);
+  background: var(--rust-pale);
+  color: var(--rust-deep);
+  padding: 12px 14px;
+}
+
+.sectionNav a:focus-visible,
+.card :is(input, select, button, a):focus-visible,
+.supplierForm :is(input, button, a):focus-visible {
+  outline: 2px solid var(--coffee);
+  outline-offset: 2px;
+  box-shadow: var(--focus-glow);
+}
+
+.card :is(input, select, button, a):disabled,
+.supplierForm :is(input, button):disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .card,
+  .supplierForm {
+    transition: transform var(--motion-fast) var(--ease-soft), box-shadow var(--motion-fast) var(--ease-soft);
+  }
+
   .card:hover,
-  .rule:hover {
-    transform: translateY(-2px);
+  .supplierForm:hover {
+    transform: translateY(-1px);
     box-shadow: var(--shadow-lift);
   }
 }
 
-.card h2,
-.card p {
-  margin: 0;
-}
+@media (max-width: 600px) {
+  .sectionNav {
+    top: 80px;
+    border-radius: var(--radius-soft);
+  }
 
-.card h3 {
-  margin: 0;
-  font-size: 1rem;
-}
+  .sectionNav a {
+    flex: 1 1 42%;
+    justify-content: center;
+    padding-inline: 8px;
+  }
 
-.form,
-.rule {
-  display: grid;
-  gap: 12px;
-  border-radius: var(--radius-soft);
-  background: rgb(243 232 216 / 35%);
-  padding: 16px;
-}
+  .actions {
+    align-items: stretch;
+  }
 
-.field {
-  display: grid;
-  gap: 6px;
-}
+  .pauseControl {
+    width: 100%;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 12px 0 0;
+  }
 
-.field input,
-.field select {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
-  background: var(--cream);
-  padding: 8px 10px;
-  color: inherit;
-}
-
-.ingredients {
-  display: grid;
-  gap: 8px;
-  max-height: 220px;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
-  background: var(--cream);
-  padding: 12px;
-}
-
-.ingredients label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.rule {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.rule p {
-  margin-top: 5px;
-}
-
-.ruleActions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ruleActions button {
-  min-height: 44px;
-  border: 1px solid rgb(89 57 39 / 10%);
-  border-radius: var(--radius-pill);
-  background: var(--green-pale);
-  padding: 9px 16px;
-  color: inherit;
-  cursor: pointer;
-}
-
-.ruleActions button:hover:not(:disabled) {
-  background: var(--coffee-light);
-}
-
-.ruleActions button:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
-
-@media (max-width: 520px) {
-  .rule {
-    grid-template-columns: 1fr;
+  .windowRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sectionNav a,
+  .card,
+  .supplierForm {
+    transition: none;
+  }
+
   .card:hover,
-  .rule:hover {
+  .supplierForm:hover {
     transform: none;
   }
 }

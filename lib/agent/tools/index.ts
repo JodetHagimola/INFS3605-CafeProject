@@ -13,6 +13,7 @@ import { logWastageTool } from "./log-wastage";
 import { recordDeliveryTool } from "./record-delivery";
 import { drinkCapacityTool, supplierDraftsTool } from "./cafe-operations";
 import { recordedOperationsTool } from "./recorded-operations";
+import { createRecordSaleTool } from "./record-sale";
 
 export function createAgentTools(defaults: {
   forecastDate: string;
@@ -20,6 +21,7 @@ export function createAgentTools(defaults: {
 }, options: {
   onApprovalCreated?: (approvalId: string, autoApproved: boolean) => void;
   profile?: "full" | "daily-brief";
+  saleRequestId?: string;
 } = {}) {
   let forecast: DemandForecast | null = null;
   let draft: DraftOrderRecord | null = null;
@@ -44,6 +46,7 @@ export function createAgentTools(defaults: {
     check_deliveries: checkDeliveriesTool,
     save_draft_order: saveDraftOrderTool,
     ...(options.profile === "daily-brief" ? {} : {
+      ...(options.saleRequestId ? { record_sale: createRecordSaleTool(options.saleRequestId) } : {}),
       request_human_approval: createRequestHumanApprovalTool(options.onApprovalCreated),
       log_wastage: logWastageTool,
       record_delivery: recordDeliveryTool,

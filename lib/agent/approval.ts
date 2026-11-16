@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { inventoryClient } from "@/lib/inventory/server";
+import { finishOrderingApproval } from "@/lib/automation/ordering-cycle";
 import { approvalDetailsSchema, approvalItemSchema, type ApprovalItem } from "./approval-schema";
 
 const rowSchema = z.object({
@@ -78,7 +79,9 @@ export async function decideApproval(input: {
     console.error("Could not decide an approval inbox item:", error.message);
     throw new Error("The approval decision could not be saved.");
   }
-  return data === true ? "updated" : "not-pending";
+  if (data !== true) return "not-pending";
+  await finishOrderingApproval(input.id, input.status);
+  return "updated";
 }
 
 export async function createRestockApproval(input: {
@@ -90,7 +93,6 @@ export async function createRestockApproval(input: {
   unit: string;
   supplier: string;
   reason: string;
-  standingRule?: { id: string; name: string; maximumTotal: number };
 }): Promise<{ id: string; estimatedCost: number; alreadyApproved: boolean }> {
   if (!Number.isSafeInteger(input.quantity) || input.quantity <= 0 || input.quantity > 100_000) {
     throw new RestockApprovalValidationError("Enter a whole-number restock quantity between 1 and 100,000.");
@@ -143,9 +145,6 @@ export async function createRestockApproval(input: {
     throw new RestockApprovalValidationError(`The selected supplier requires a minimum order of ${minimumOrder} ${input.unit}.`);
   }
   const estimatedCost = Math.round(input.quantity * price * 100) / 100;
-  if (input.standingRule && estimatedCost > input.standingRule.maximumTotal) {
-    throw new Error("The current supplier price exceeds the standing rule limit; manual approval is required.");
-  }
   const details = approvalDetailsSchema.parse({
     briefDate: input.briefDate,
     briefActionId: input.actionId,
@@ -156,16 +155,9 @@ export async function createRestockApproval(input: {
     supplier: input.supplier,
     estimatedCost,
     reason: input.reason.slice(0, 1000),
-    approvalSource: input.standingRule ? "standing_rule" : "today_brief",
-    ...(input.standingRule ? {
-      standingRuleId: input.standingRule.id,
-      standingRuleName: input.standingRule.name,
-    } : {}),
+    approvalSource: "today_brief",
   });
   const reviewedAt = new Date().toISOString();
-  const reviewerNote = input.standingRule
-    ? `Automatically approved by standing rule "${input.standingRule.name}". No order was placed and no supplier was contacted.`
-    : "Approved from Today's Brief. No order was placed and no supplier was contacted.";
   const { data, error } = await db.from("approval_inbox")
     .insert({
       action: "place_or_send_order",
@@ -173,7 +165,7 @@ export async function createRestockApproval(input: {
       details,
       status: "approved",
       reviewed_at: reviewedAt,
-      reviewer_note: reviewerNote.slice(0, 500),
+      reviewer_note: "Approved by the owner from Today's Brief. No order was placed and no supplier was contacted.",
     })
     .select("id")
     .single();

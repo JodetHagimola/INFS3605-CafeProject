@@ -4,7 +4,6 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { generateText, Output } from "ai";
 import { inventoryClient } from "@/lib/inventory/server";
-import { createRestockApproval } from "./approval";
 import { isValidISODate } from "./date";
 import {
   calculateRestockSuggestion,
@@ -209,7 +208,7 @@ function toBrief(input: {
   warnings: string[];
 }): DailyBrief {
   const stockCheckIncomplete = input.warnings.some((warning) =>
-    /couldn't check|couldn't calculate|couldn't project|no inventory record|missing stock|stale or missing update|recipe is missing/i.test(warning),
+    /couldn't check|couldn't calculate|couldn't project|no inventory record|missing stock|recipe is missing/i.test(warning),
   );
   const approvedIds = new Set(input.stockItems
     .filter((item) => /restock (?:was )?(?:auto-)?approved/i.test(item.headline))
@@ -263,25 +262,6 @@ function stockHeadline(item: StockAttention): string {
   return item.quantity < item.minimum
     ? `${item.ingredient} is running low.`
     : `${item.ingredient} may run short today.`;
-}
-
-function matchingStandingRule(
-  rules: DataRow[] | null,
-  ingredientId: string,
-  supplier: string,
-  total: number,
-): { id: string; name: string; maximumTotal: number } | null {
-  for (const rule of rules ?? []) {
-    if (rule.enabled !== true
-      || rule.supplier !== supplier
-      || !Array.isArray(rule.ingredient_ids)
-      || !rule.ingredient_ids.map(String).includes(ingredientId)) continue;
-    const maximumTotal = Number(rule.maximum_total);
-    if (!Number.isFinite(maximumTotal) || total > maximumTotal) continue;
-    if (typeof rule.id !== "string" || typeof rule.name !== "string" || !rule.name.trim()) continue;
-    return { id: rule.id, name: rule.name.trim(), maximumTotal };
-  }
-  return null;
 }
 
 function approvedRestockDetails(rows: DataRow[] | null): Map<string, Record<string, unknown>> {
@@ -383,9 +363,9 @@ async function stockBriefItems(input: {
   incomingWithinThreeDays: ReadonlyMap<string, number>;
   incomingIsReliable: boolean;
   supplierOffers: ReadonlyMap<string, SupplierOffer[]>;
-  standingRules: DataRow[] | null;
   approvedRestocks: Map<string, Record<string, unknown>>;
   warnings: string[];
+  allowApprovals: boolean;
 }): Promise<DailyBriefStockItem[]> {
   const stockItems: DailyBriefStockItem[] = [];
   for (const item of input.stock.slice(0, 3)) {
@@ -406,7 +386,7 @@ async function stockBriefItems(input: {
       continue;
     }
 
-    const actionId = randomUUID();
+    const actionId = input.allowApprovals ? randomUUID() : null;
     const stockItem: DailyBriefStockItem = {
       ingredient_id: item.ingredientId,
       name: item.ingredient,
@@ -418,53 +398,12 @@ async function stockBriefItems(input: {
         supplier: suggestion.supplier,
         estimated_cost: suggestion.estimatedCost,
       },
-      approve_action_id: suggestion.quantity !== null
+      approve_action_id: actionId && suggestion.quantity !== null
         && suggestion.quantity > 0
         && suggestion.supplier
         ? actionId
         : null,
     };
-    const suggestedQuantity = suggestion.quantity;
-    const supplier = suggestion.supplier;
-    const rule = suggestedQuantity !== null
-      && suggestedQuantity > 0
-      && supplier
-      && suggestion.estimatedCost !== null
-      ? matchingStandingRule(input.standingRules, item.ingredientId, supplier, suggestion.estimatedCost)
-      : null;
-    if (rule && stockItem.approve_action_id && suggestedQuantity !== null && supplier) {
-      try {
-        const approval = await createRestockApproval({
-          actionId,
-          briefDate: input.date,
-          ingredientId: item.ingredientId,
-          ingredient: item.ingredient,
-          quantity: suggestedQuantity,
-          unit: suggestion.unit,
-          supplier,
-          reason: item.status,
-          standingRule: rule,
-        });
-        input.approvedRestocks.set(item.ingredientId, {
-          ingredientId: item.ingredientId,
-          quantity: suggestedQuantity,
-          unit: suggestion.unit,
-          supplier,
-          estimatedCost: approval.estimatedCost,
-        });
-        stockItems.push(approvedStockItem(
-          item,
-          approval.alreadyApproved
-            ? "This restock was already approved today. No order was placed or supplier contacted."
-            : `Automatically approved under standing rule "${rule.name}". No order was placed or supplier contacted.`,
-          suggestion,
-        ));
-        continue;
-      } catch (error) {
-        logStageError("standing-rule restock approval", error);
-        addWarning(input.warnings, `I couldn't apply the standing rule for ${item.ingredient}; manual approval is available.`);
-      }
-    }
     stockItems.push(stockItem);
   }
   return stockItems;
@@ -541,7 +480,7 @@ async function loadCachedBrief(date: string, fingerprint: string): Promise<{ bri
   }
 }
 
-async function generateDailyBrief(date: string): Promise<DailyBrief> {
+async function generateDailyBrief(date: string, allowApprovals: boolean): Promise<DailyBrief> {
   const warnings: string[] = [];
   let db: ReturnType<typeof inventoryClient> | null = null;
   try {
@@ -564,7 +503,6 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     deliveryRows,
     receiptRows,
     supplierRows,
-    standingRuleRows,
     approvedRows,
   ] = await Promise.all([
     read("recent sales", () => readRows(
@@ -581,12 +519,11 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
       return data?.name ?? null;
     }),
     read("ingredient details", () => readRows(db!, "ingredients", "ingredient_id,ingredient_name,unit", ["ingredient_id"])),
-    read("inventory", () => readRows(db!, "inventory", "ingredient_id,quantity_in_stock,minimum_stock,last_updated", ["ingredient_id"])),
+    read("inventory", () => readRows(db!, "inventory", "ingredient_id,quantity_in_stock,minimum_stock,last_counted_at", ["ingredient_id"])),
     read("recipes", () => readRows(db!, "recipes", "product_name,ingredient_id,quantity_required", ["product_name", "ingredient_id"])),
     read("incoming deliveries", () => readRows(db!, "open_incoming_deliveries", "delivery_id,ingredient_id,quantity,expected_date", ["delivery_id"])),
     read("delivery receipts", () => readRows(db!, "delivery_receipts", "delivery_id,received_quantity,received_at", ["delivery_id"])),
     read("supplier prices", () => readRows(db!, "supplier_prices", "supplier,ingredient_id,price,delivery_time,minimum_order", ["ingredient_id", "price"])),
-    read("standing rules", () => readRows(db!, "standing_rules", "id,name,enabled,ingredient_ids,supplier,maximum_total", ["id"])),
     read("approved restocks for this date", () => readApprovedRestocks(db!, date)),
   ]);
 
@@ -610,7 +547,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     id: string;
     quantity: number | null;
     minimum: number | null;
-    updatedAt: string | null;
+    lastCountedAt: string | null;
   }> = [];
   let recipes: Array<{ product: string; ingredientId: string; quantityRequired: number }> = [];
   try {
@@ -629,7 +566,7 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
       id: String(row.ingredient_id),
       quantity: row.quantity_in_stock === null ? null : parseNumber(row.quantity_in_stock, "Inventory quantity"),
       minimum: row.minimum_stock === null ? null : parseNumber(row.minimum_stock, "Minimum stock"),
-      updatedAt: typeof row.last_updated === "string" ? row.last_updated : null,
+      lastCountedAt: typeof row.last_counted_at === "string" ? row.last_counted_at : null,
     }));
     if (recipeRows) recipes = recipeRows.map((row) => ({
       product: parseText(row.product_name, "Recipe product"),
@@ -652,20 +589,6 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
   if (incompleteInventory > 0) {
     addWarning(warnings, `${incompleteInventory} inventory record${incompleteInventory === 1 ? " has" : "s have"} a missing stock quantity or minimum and couldn't be assessed.`);
   }
-  const now = Date.now();
-  const staleIds = new Set(inventory.flatMap((item) => {
-    const updatedAt = item.updatedAt ? Date.parse(item.updatedAt) : NaN;
-    return !Number.isFinite(updatedAt)
-      || updatedAt > now + 5 * 60 * 1000
-      || now - updatedAt > 7 * 24 * 60 * 60 * 1000
-      ? [item.id]
-      : [];
-  }));
-  if (staleIds.size > 0) {
-    addWarning(warnings, `${staleIds.size} inventory record${staleIds.size === 1 ? " has" : "s have"} stale or missing update times and couldn't be used.`);
-  }
-  inventory = inventory.filter((item) => !staleIds.has(item.id));
-
   const incomingByIngredient = new Map<string, number>();
   const incomingWithinThreeDays = new Map<string, number>();
   const deliveryIssues = new Set<string>();
@@ -766,9 +689,9 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
     incomingWithinThreeDays,
     incomingIsReliable,
     supplierOffers: offersByIngredient,
-    standingRules: standingRuleRows,
     approvedRestocks: approvedRestockDetails(approvedRows),
     warnings,
+    allowApprovals,
   });
   const greetingResult = await generateGreeting({ date, traffic, stock, warnings });
   if (greetingResult.warning) addWarning(warnings, greetingResult.warning);
@@ -783,7 +706,11 @@ async function generateDailyBrief(date: string): Promise<DailyBrief> {
   });
 }
 
-export async function getDailyBrief(options: { refresh?: boolean; date?: string } = {}): Promise<DailyBrief & { briefDate: string }> {
+export async function getDailyBrief(options: {
+  refresh?: boolean;
+  date?: string;
+  allowApprovals?: boolean;
+} = {}): Promise<DailyBrief & { briefDate: string }> {
   const date = options.date ?? cafeLocalDate();
   if (!isValidISODate(date)) throw new Error("The requested brief date is invalid.");
 
@@ -795,7 +722,7 @@ export async function getDailyBrief(options: { refresh?: boolean; date?: string 
       return data;
     },
     load: async (fingerprint) => (await loadCachedBrief(date, fingerprint)).brief,
-    generate: () => generateDailyBrief(date),
+    generate: () => generateDailyBrief(date, options.allowApprovals !== false),
     save: (brief, fingerprint) => saveBrief(date, brief, fingerprint),
   }).then(brief => ({ ...brief, briefDate: date }));
 }

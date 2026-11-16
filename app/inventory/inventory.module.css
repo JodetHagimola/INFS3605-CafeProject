@@ -19,6 +19,7 @@
 .bad { background: var(--rust-pale); color: var(--rust-deep); }
 .neutral { background: var(--paper); color: var(--muted); }
 .caption { text-align: left; padding: 12px 20px; color: var(--muted); font-size: 13px; }
+.countNote { display: block; margin-top: 4px; color: var(--muted); }
 .editor { margin-top: 28px; padding: 24px; border: 1px solid rgb(89 57 39 / 9%); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-soft); }
 .editorHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .editor h2 { margin: 0; font-size: 22px; }

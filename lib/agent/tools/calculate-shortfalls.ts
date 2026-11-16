@@ -2,7 +2,6 @@ import { sydneyDay } from "@/lib/inventory-sales/operations-model";
 import { tool } from "ai";
 import { z } from "zod";
 import { getInventory } from "@/lib/inventory/server";
-import type { InventoryItem } from "@/lib/inventory/model";
 import { idValue, nonnegativeNumber, readAll, textValue, validDate } from "./shared";
 import type { DemandForecast } from "./forecast-model";
 import { withAgentActivity } from "./activity";
@@ -31,14 +30,6 @@ export type ShortfallResult = {
     receipts: Array<{ deliveryId: string; receivedQuantity: number; receivedAt: string }>;
   };
 };
-
-function isStale(item: InventoryItem | undefined, now: number): boolean {
-  if (!item?.updated) return true;
-  const updatedAt = Date.parse(item.updated);
-  return !Number.isFinite(updatedAt)
-    || updatedAt > now + 5 * 60 * 1000
-    || now - updatedAt > 7 * 24 * 60 * 60 * 1000;
-}
 
 export async function calculateShortfalls(forecast: DemandForecast | null): Promise<ShortfallResult> {
   if (!forecast || forecast.status !== "ready") {
@@ -102,7 +93,6 @@ export async function calculateShortfalls(forecast: DemandForecast | null): Prom
   }
 
   const inventory = new Map(inventoryResult.items.map((item) => [item.id, item]));
-  const now = Date.now();
   const receivedByDelivery = new Map<string, number>();
   const receipts = receiptRows.map((row) => {
     const deliveryId = idValue(row.delivery_id, "Receipt delivery ID");
@@ -142,7 +132,6 @@ export async function calculateShortfalls(forecast: DemandForecast | null): Prom
     const item = inventory.get(id);
     return !item || item.quantity === null || item.quantity < 0 || item.status === "Check data";
   });
-  const staleInventory = [...requiredById.keys()].filter((id) => isStale(inventory.get(id), now));
   const unknownIngredients = [...requiredById.keys()].filter((id) => !ingredients.has(id));
   const blockingFlags = [
     ...(missingRecipeProducts.size
@@ -150,9 +139,6 @@ export async function calculateShortfalls(forecast: DemandForecast | null): Prom
       : []),
     ...(missingInventory.length
       ? [`Inventory data is missing or invalid for ingredient IDs: ${missingInventory.join(", ")}.`]
-      : []),
-    ...(staleInventory.length
-      ? [`Inventory data is stale or has no update time for ingredient IDs: ${staleInventory.join(", ")}.`]
       : []),
     ...(unknownIngredients.length
       ? [`Recipes refer to unknown ingredient IDs: ${unknownIngredients.join(", ")}.`]

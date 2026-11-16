@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { hasAgentSession } from "@/lib/agent/auth";
-import { getGeminiModel } from "@/lib/agent/model";
+import { getGeminiModel, getGeminiModelId } from "@/lib/agent/model";
 import { inventoryClient } from "@/lib/inventory/server";
 
 export const runtime = "nodejs";
@@ -19,7 +19,11 @@ const tableProbes = [
   ["agent_activity", "id,tool,input_summary,outcome,reason,created_at"],
   ["draft_orders", "id,status,forecast_date,forecast,lines,flags,data_used"],
   ["approval_inbox", "id,action,summary,details,status,created_at,reviewed_at,reviewer_note"],
-  ["standing_rules", "id,name,enabled,ingredient_ids,supplier,maximum_total"],
+] as const;
+
+const legacyPolicySources = [
+  { name: "standing_rules", active: false },
+  { name: "rules (decision limits)", active: false },
 ] as const;
 
 function safeError(error: unknown): { name: string; message: string } {
@@ -48,7 +52,7 @@ export async function GET() {
   };
 
   let gemini: { ok: boolean; model: string; error?: ReturnType<typeof safeError> };
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
+  const model = getGeminiModelId();
   try {
     const result = await generateText({
       model: getGeminiModel(),
@@ -83,6 +87,7 @@ export async function GET() {
     environment: env,
     gemini,
     tables,
+    legacyPolicySources,
     date: new Intl.DateTimeFormat("en-CA", {
       timeZone: "Australia/Sydney",
       year: "numeric",
